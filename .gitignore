@@ -1,0 +1,88 @@
+# ==========================================
+# Environment variables
+# ==========================================
+.env
+
+# ==========================================
+# Go Backend
+# ==========================================
+
+# Build output
+server/bin/
+server/dist/
+server/build/
+
+# Air
+server/tmp/
+server/.air/
+
+# Go test output
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Go workspace
+go.work.sum
+
+# Vendor (uncomment if you don't commit vendor)
+# backend/vendor/
+
+# ==========================================
+# React / Vite Frontend
+# ==========================================
+
+client/node_modules/
+
+# Build output
+client/dist/
+client/build/
+
+# Vite cache
+client/.vite/
+
+# Logs
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/pnpm-debug.log*
+
+# ==========================================
+# IDEs
+# ==========================================
+
+.vscode/
+.idea/
+
+# JetBrains
+*.iml
+
+# ==========================================
+# OS Files
+# ==========================================
+
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Temporary Files
+# ==========================================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ==========================================
+# Coverage Reports
+# ==========================================
+
+coverage/
+.coverage
+
+# ==========================================
+# Misc
+# ==========================================
+
+*.log
