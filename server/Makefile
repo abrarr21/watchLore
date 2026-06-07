@@ -1,5 +1,5 @@
 BINARY_NAME=watchLore
-MAIN_PACKAGE_PATH=./cmd/app
+MAIN_PACKAGE_PATH=./cmd/api
 
 .PHONY: tidy
 tidy:
