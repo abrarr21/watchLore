@@ -19,8 +19,9 @@ type DatabaseConfig struct {
 }
 
 type JwtConfig struct {
-	JWT_SECRET     string
-	AccessTokenTTL time.Duration
+	JWT_SECRET      string
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 type Config struct {
@@ -56,8 +57,9 @@ func Load() *Config {
 		},
 
 		JwtConfig{
-			JWT_SECRET:     jwt_secret,
-			AccessTokenTTL: mustParseDuration(getEnv("ACCESS_TOKEN_TTL", "20m")),
+			JWT_SECRET:      jwt_secret,
+			AccessTokenTTL:  mustParseDuration(getEnv("ACCESS_TOKEN_TTL", "20m")),
+			RefreshTokenTTL: mustParseDuration(getEnv("REFRESH_TOKEN_TTL", "3d")),
 		},
 	}
 }
