@@ -35,3 +35,27 @@ func GenerateToken(useridProvided, email, jwtSecret string, ttl time.Duration) (
 	// Sign the token with the application's secret key and return the JWT string.
 	return token.SignedString([]byte(jwtSecret))
 }
+
+func ParseToken(tokenString, jwtSecret string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrTokenInvalid
+		}
+
+		return []byte(jwtSecret), nil
+	})
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrTokenExpired
+		}
+		return nil, ErrTokenInvalid
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, ErrTokenInvalid
+	}
+
+	return claims, nil
+}

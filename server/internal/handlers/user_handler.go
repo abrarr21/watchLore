@@ -165,3 +165,38 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		log.Printf("failed to encode login handlers response: %v", err)
 	}
 }
+
+func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("refreshToken")
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, "missing refresh token", nil)
+		return
+	}
+
+	claims, err := utils.ParseToken(cookie.Value, h.Cfg.JWT.JWT_SECRET)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, "invalid or expired refresh token", nil)
+		return
+	}
+
+	accessToken, err := utils.GenerateToken(claims.UserID, claims.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.AccessTokenTTL)
+	if err != nil {
+		log.Printf("refresh: generate access token: %v", err)
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to refresh token", nil)
+		return
+	}
+
+	utils.SetCookie(w, "accessToken", accessToken, 15*60)
+	if err := utils.WriteJSON(w, http.StatusOK, "token refreshed", nil); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	utils.ClearCookie(w, "accessToken")
+	utils.ClearCookie(w, "refreshToken")
+
+	if err := utils.WriteJSON(w, http.StatusOK, "logged out successfully", nil); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
+}
