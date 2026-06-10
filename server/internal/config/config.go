@@ -24,10 +24,17 @@ type JwtConfig struct {
 	RefreshTokenTTL time.Duration
 }
 
+type ImagekitConfig struct {
+	ImgPvtKey string
+	ImgPubKey string
+	ImgURL    string
+}
+
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JwtConfig
+	ImageKit ImagekitConfig
 }
 
 func Load() *Config {
@@ -45,6 +52,21 @@ func Load() *Config {
 		log.Fatal("JWT_SECRET is not defined in .env file")
 	}
 
+	imgkitPvtKey := os.Getenv("ImageKitPrivateKey")
+	if imgkitPvtKey == "" {
+		log.Fatal("ImageKitPrivateKey is not defined in .env file")
+	}
+
+	imgKitPubKey := os.Getenv("ImageKitPublicKey")
+	if imgKitPubKey == "" {
+		log.Fatal("ImageKitPublicKey is not defined in .env file")
+	}
+
+	imgKitURL := os.Getenv("ImageKitURL")
+	if imgKitURL == "" {
+		log.Fatal("ImageKitURL is not defined in .env file")
+	}
+
 	return &Config{
 		ServerConfig{
 			Port: getEnv("PORT", "8080"),
@@ -60,6 +82,12 @@ func Load() *Config {
 			JWT_SECRET:      jwt_secret,
 			AccessTokenTTL:  mustParseDuration(getEnv("ACCESS_TOKEN_TTL", "20m")),
 			RefreshTokenTTL: mustParseDuration(getEnv("REFRESH_TOKEN_TTL", "3d")),
+		},
+
+		ImagekitConfig{
+			ImgPvtKey: imgkitPvtKey,
+			ImgPubKey: imgKitPubKey,
+			ImgURL:    imgKitURL,
 		},
 	}
 }

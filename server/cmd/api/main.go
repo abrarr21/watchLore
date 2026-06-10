@@ -13,6 +13,7 @@ import (
 	"github.com/abrarr21/watchLore/internal/database"
 	"github.com/abrarr21/watchLore/internal/handlers"
 	"github.com/abrarr21/watchLore/internal/routes"
+	"github.com/abrarr21/watchLore/internal/storage"
 )
 
 func main() {
@@ -28,7 +29,8 @@ func main() {
 		}
 	}()
 
-	h := handlers.New(db, cfg)
+	imageStorage := storage.NewImageKitStorage(&cfg.ImageKit)
+	h := handlers.New(db, cfg, imageStorage)
 
 	router := routes.RegisterAllRoutes(h)
 
