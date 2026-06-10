@@ -13,6 +13,7 @@ func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 	r.Get("/", h.CheckHealth)
 
 	UserRoutes(r, h)
+	ShowsRoutes(r, h)
 
 	return r
 }
