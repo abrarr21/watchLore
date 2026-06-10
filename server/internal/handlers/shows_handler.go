@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/abrarr21/watchLore/internal/middlewares"
@@ -16,12 +16,34 @@ import (
 func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	var input models.Shows
-
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		log.Printf("failed to decode input body: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid form data", nil)
 		return
+	}
+
+	// parse plain fields
+	var input models.ShowsRequest
+	input.Title = r.FormValue("title")
+	input.Type = models.ShowsType(r.FormValue("type"))
+	input.Status = models.ShowsStatus(r.FormValue("status"))
+
+	// parse genre (sent as multiple values: genre=Action&genre=Drama)
+	input.Genre = r.Form["genre"]
+
+	// parse optional rating
+	if ratingStr := r.FormValue("rating"); ratingStr != "" {
+		rating, err := strconv.ParseFloat(ratingStr, 64)
+		if err != nil {
+			utils.WriteJSON(w, http.StatusBadRequest, "invalid rating format", nil)
+			return
+		}
+		input.Rating = &rating
+	}
+
+	// parse optional review
+	if review := r.FormValue("review"); review != "" {
+		input.Review = &review
 	}
 
 	if err := utils.Validate(input); err != nil {
@@ -36,7 +58,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !input.Status.IsValid() {
-		utils.WriteJSON(w, http.StatusBadRequest, "status must be one of:watching, completed, planned", nil)
+		utils.WriteJSON(w, http.StatusBadRequest, "status must be one of: completed, watching, planned", nil)
 		return
 	}
 
@@ -45,10 +67,26 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
 		return
 	}
+
 	userObjID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID format", nil)
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID", nil)
 		return
+	}
+
+	// Handle optianal image upload
+	//Image is optional — r.FormFile("image") is only processed if present (err == nil), unlike CreateUser where it's required. Rollback only triggers if FileID is non-empty.
+	var showImage models.ShowsImage
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		uploaded, err := h.Storage.UploadImage(file, header.Filename)
+		if err != nil {
+			log.Printf("failed to upload image: %v", err)
+			utils.WriteJSON(w, http.StatusInternalServerError, "failed to uplaod image", nil)
+			return
+		}
+		showImage = *uploaded
 	}
 
 	now := time.Now().UTC()
@@ -62,6 +100,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 		Status:    input.Status,
 		Rating:    input.Rating,
 		Review:    input.Review,
+		Images:    showImage,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -69,28 +108,18 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	res, err := h.DB.Shows.InsertOne(ctx, show)
+	_, err = h.DB.Shows.InsertOne(ctx, show)
 	if err != nil {
-		log.Printf("failed to insert show: %v", err)
+		//Rollback image upload if DB insert fails
+		if showImage.FileID == "" {
+			if deleteErr := h.Storage.DeleteImage(showImage.FileID); deleteErr != nil {
+				log.Printf("rollback failed for fileID %s: %v", showImage.FileID, deleteErr)
+			}
+		}
+		log.Printf("db insert failed: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create show", nil)
 		return
 	}
 
-	log.Println("show created:", res.InsertedID)
-
-	response := models.ShowsResponse{
-		ID:        show.ID.Hex(),
-		Title:     show.Title,
-		Type:      show.Type,
-		Genre:     show.Genre,
-		Status:    show.Status,
-		Rating:    *show.Rating,
-		Review:    *show.Review,
-		CreatedAt: show.CreatedAt,
-		UpdatedAt: show.UpdatedAt,
-	}
-
-	if err := utils.WriteJSON(w, http.StatusCreated, "show created successfully", response); err != nil {
-		log.Printf("failed to encode create show response: %v", err)
-	}
+	utils.WriteJSON(w, http.StatusCreated, "show created successfully", show)
 }
