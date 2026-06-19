@@ -7,11 +7,19 @@ import (
 )
 
 func ShowsRoutes(r chi.Router, h *handlers.Handler) {
-	r.Group(func(r chi.Router) {
 
-		r.Use(middlewares.RequireAuth(h.Cfg.JWT.JWT_SECRET))
-		r.Route("/api/shows", func(r chi.Router) {
+	r.Route("/api/shows", func(r chi.Router) {
+
+		// pubilc routes
+		r.Get("/", h.GetAllShows)
+		r.Get("/{id}", h.GetById)
+
+		// protected routes
+		r.Group(func(r chi.Router) {
+			r.Use(middlewares.RequireAuth(h.Cfg.JWT.JWT_SECRET))
+
 			r.Post("/", h.CreateShows)
+			r.Delete("/{id}", h.DeleteShow)
 		})
 	})
 }
