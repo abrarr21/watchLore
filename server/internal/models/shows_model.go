@@ -83,3 +83,10 @@ type ShowsResponse struct {
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
 }
+
+type UpdateShowsRequest struct {
+	Status *ShowsStatus `json:"status" validate:"omitempty"`
+	Rating *float64     `json:"rating,omitempty" validate:"omitempty,gte=0,lte=10"`
+	Review *string      `json:"review,omitempty"`
+	Genre  []string     `json:"genre" validate:"omitempty,dive,min=1"`
+}

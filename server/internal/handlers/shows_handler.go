@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -258,4 +259,92 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	if err := utils.WriteJSON(w, http.StatusOK, "show fetched successfully", response); err != nil {
 		log.Printf("error encoding GetById response")
 	}
+}
+
+func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	id := chi.URLParam(r, "id")
+	showId, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		return
+	}
+
+	userID, ok := middlewares.GetUserID(r)
+	if !ok {
+		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		return
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid user id", nil)
+		return
+	}
+
+	var input models.UpdateShowsRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+		return
+	}
+
+	if err := utils.Validate(input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "validation failed", nil)
+		return
+	}
+
+	// Build dynamic Mongodb $set document based on non-nil fields
+	updateDoc := bson.M{}
+
+	if input.Status != nil {
+		if !input.Status.IsValid() {
+			utils.WriteJSON(w, http.StatusBadRequest, "status must be one of: completed, watching, planned", nil)
+			return
+		}
+		updateDoc["status"] = *input.Status
+	}
+
+	if input.Rating != nil {
+		updateDoc["rating"] = *input.Rating
+	}
+
+	if input.Review != nil {
+		updateDoc["review"] = *input.Review
+	}
+
+	if input.Genre != nil {
+		updateDoc["genre"] = input.Genre
+	}
+
+	if len(updateDoc) == 0 {
+		utils.WriteJSON(w, http.StatusBadRequest, "no valid fields provided for update", nil)
+		return
+	}
+
+	updateDoc["updated_at"] = time.Now().UTC()
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Ensure the user updating the show is the owner
+	filter := bson.M{"_id": showId, "user_id": userObjID}
+	update := bson.M{"$set": updateDoc}
+
+	res, err := h.DB.Shows.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Printf("failed to update show %s: %v", id, err)
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to update show", nil)
+		return
+	}
+
+	if res.MatchedCount == 0 {
+		// Show either doens't exist or doesn't belong to the logged-in user
+		utils.WriteJSON(w, http.StatusNotFound, "show not found or StatusUnauthorized", nil)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "show updated successfully", nil)
 }

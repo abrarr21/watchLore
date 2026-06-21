@@ -20,6 +20,7 @@ func ShowsRoutes(r chi.Router, h *handlers.Handler) {
 
 			r.Post("/", h.CreateShows)
 			r.Delete("/{id}", h.DeleteShow)
+			r.Patch("/{id}", h.UpdateShow)
 		})
 	})
 }
