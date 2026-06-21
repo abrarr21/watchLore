@@ -35,6 +35,11 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JwtConfig
 	ImageKit ImagekitConfig
+	TMDB     TMDBConfig
+}
+
+type TMDBConfig struct {
+	TMDB_KEY string
 }
 
 func Load() *Config {
@@ -67,6 +72,11 @@ func Load() *Config {
 		log.Fatal("ImageKitURL is not defined in .env file")
 	}
 
+	tmdbKey := os.Getenv("TMDB_API_KEY")
+	if tmdbKey == "" {
+		log.Fatal("TMDB_API_KEY is not defined in .env file")
+	}
+
 	return &Config{
 		ServerConfig{
 			Port: getEnv("PORT", "8080"),
@@ -88,6 +98,10 @@ func Load() *Config {
 			ImgPvtKey: imgkitPvtKey,
 			ImgPubKey: imgKitPubKey,
 			ImgURL:    imgKitURL,
+		},
+
+		TMDBConfig{
+			TMDB_KEY: tmdbKey,
 		},
 	}
 }

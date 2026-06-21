@@ -530,3 +530,54 @@ func (h *Handler) SaveExternalImageURL(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, "external image URL saved successfully", newImage)
 
 }
+
+func (h *Handler) GetTrendingShows(w http.ResponseWriter, r *http.Request) {
+	tmdbToken := h.Cfg.TMDB.TMDB_KEY
+	if tmdbToken == "" {
+		utils.WriteJSON(w, http.StatusInternalServerError, "trending service unconfigured", nil)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	// 1. Create external HTTP request
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.themoviedb.org/3/trending/all/day?language=en-US", nil)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to build request", nil)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+tmdbToken)
+	req.Header.Set("accept", "appication/json")
+
+	// 2. Perform the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "failed to reach TMDB API", nil)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		utils.WriteJSON(w, http.StatusBadGateway, "TMDB API returned error status", nil)
+		return
+	}
+
+	// 3. Decode TMDB response
+	var tmdbData models.TMDBResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tmdbData); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to decode TMDB response", nil)
+		return
+	}
+
+	// 4. Map TMDB results to your ShowsResponse structure
+	normalizedShows := make([]models.ShowsResponse, 0, len(tmdbData.Results))
+
+	for _, item := range tmdbData.Results {
+		normalizedShows = append(normalizedShows, utils.MapTMDBToShowResponse(item))
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "trending shows fetched successfully", normalizedShows)
+}

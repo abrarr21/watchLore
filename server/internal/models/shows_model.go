@@ -94,3 +94,37 @@ type UpdateShowsRequest struct {
 type ExternalImageURLRequest struct {
 	URL string `json:"url" validate:"required,url"`
 }
+
+// TMDB structure
+type TMDBItem struct {
+	ID          int     `json:"id"`
+	Title       string  `json:"title,omitempty"` // User for movies
+	Name        string  `json:"name,omitempty"`  // used for tv/movies
+	MediaType   string  `json:"media_type"`
+	GenreIDs    []int   `json:"genre_ids"`
+	VoteAverage float64 `json:"vote_average"`
+	PosterPath  string  `json:"poster_path"`
+}
+
+type TMDBResponse struct {
+	Results []TMDBItem `json:"results"`
+}
+
+var TmdbGenreMap = map[int]string{
+	28:    "Action",
+	12:    "Adventure",
+	16:    "Animation",
+	35:    "Comedy",
+	80:    "Crime",
+	99:    "Documentary",
+	18:    "Drama",
+	10751: "Family",
+	14:    "Fantasy",
+	27:    "Horror",
+	9648:  "Mystery",
+	10749: "Romance",
+	878:   "Sci-Fi",
+	53:    "Thriller",
+	10759: "Action & Adventure", // TV Genre
+	10765: "Sci-Fi & Fantasy",   // TV Genre
+}
