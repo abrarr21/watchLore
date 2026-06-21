@@ -77,8 +77,8 @@ type ShowsResponse struct {
 	Type      ShowsType   `json:"type"`
 	Genre     []string    `json:"genre"`
 	Status    ShowsStatus `json:"status"`
-	Rating    float64     `json:"rating,omitempty"`
-	Review    string      `json:"review,omitempty"`
+	Rating    *float64    `json:"rating,omitempty"`
+	Review    *string     `json:"review,omitempty"`
 	Images    ShowsImage  `json:"images"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
