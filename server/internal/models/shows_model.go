@@ -90,3 +90,7 @@ type UpdateShowsRequest struct {
 	Review *string      `json:"review,omitempty"`
 	Genre  []string     `json:"genre" validate:"omitempty,dive,min=1"`
 }
+
+type ExternalImageURLRequest struct {
+	URL string `json:"url" validate:"required,url"`
+}

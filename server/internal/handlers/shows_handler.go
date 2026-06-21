@@ -348,3 +348,185 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, http.StatusOK, "show updated successfully", nil)
 }
+
+func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	showId, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		return
+	}
+
+	userID, ok := middlewares.GetUserID(r)
+	if !ok {
+		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		return
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID", nil)
+		return
+	}
+
+	// Ensure 10MB request limit
+	r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024)
+
+	// parse the multipart form
+	err = r.ParseMultipartForm(10 << 20) // 10 MB in memroy buffer
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "file size exceeds 10MB limit or invalid form", nil)
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "missing image file in request form", nil)
+		return
+	}
+	defer file.Close()
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	// Verify show exists and belongs to the authenticated user
+	var show models.Shows
+	filter := bson.M{"_id": showId, "user_id": userObjID}
+	err = h.DB.Shows.FindOne(ctx, filter).Decode(&show)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			utils.WriteJSON(w, http.StatusNotFound, "show not found or unauthorized", nil)
+			return
+		}
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to query show", nil)
+		return
+	}
+
+	// Upload the new image
+	uploadImage, err := h.Storage.UploadImage(file, header.Filename)
+	if err != nil {
+		log.Printf("image upload faild: %v", err)
+		utils.WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	// update the show document in MongoDB
+	update := bson.M{
+		"$set": bson.M{
+			"images":     *uploadImage,
+			"updated_at": time.Now().UTC(),
+		},
+	}
+
+	_, err = h.DB.Shows.UpdateOne(ctx, filter, update)
+	if err != nil {
+		// Rollback newly uploaded image from imagekit if DB update fails
+		if delErr := h.Storage.DeleteImage(uploadImage.FileID); delErr != nil {
+			log.Printf("rollback failed for fileID %s: %v", uploadImage.FileID, delErr)
+			log.Printf("failed to update show image in DB: %v", err)
+			utils.WriteJSON(w, http.StatusInternalServerError, "failed to save image metadata", nil)
+			return
+		}
+
+	}
+
+	// delete the old image if existed
+	if show.Images.FileID != "" {
+		go func(oldFileID string) {
+			// run in background to not block client response
+			if delErr := h.Storage.DeleteImage(oldFileID); delErr != nil {
+				log.Printf("failed to delete old image %s: %v", oldFileID, delErr)
+			}
+		}(show.Images.FileID)
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "image uploaded successfully", uploadImage)
+}
+
+func (h *Handler) SaveExternalImageURL(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	id := chi.URLParam(r, "id")
+	showId, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		return
+	}
+
+	userID, ok := middlewares.GetUserID(r)
+	if !ok {
+		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		return
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID", nil)
+		return
+	}
+
+	var input models.ExternalImageURLRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+		return
+	}
+
+	if err := utils.Validate(input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, "validation failed", err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// fetch the show to check the ownership and get any old image info
+	var show models.Shows
+	filter := bson.M{"_id": showId, "user_id": userObjID}
+	err = h.DB.Shows.FindOne(ctx, filter).Decode(&show)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			utils.WriteJSON(w, http.StatusNotFound, "show not found or unauthenticated", nil)
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to query show", nil)
+		return
+	}
+
+	// prepare the external image struct (using placeholder metadata to satisfy validation tags)
+	newImage := models.ShowsImage{
+		URL:    input.URL,
+		Name:   "external",
+		FileID: "external",
+	}
+
+	// update the show in mongoDb
+	update := bson.M{
+		"$set": bson.M{
+			"images":     newImage,
+			"updated_at": time.Now().UTC(),
+		},
+	}
+
+	_, err = h.DB.Shows.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Printf("failed to save external image URL in DB: %v", err)
+		utils.WriteJSON(w, http.StatusInternalServerError, "failed to save image URL", nil)
+		return
+	}
+
+	// Clean up old imageKit image if it was hosted on Imagekit
+	if show.Images.FileID != "" && show.Images.FileID != "external" {
+		go func(oldFileID string) {
+			if delErr := h.Storage.DeleteImage(oldFileID); delErr != nil {
+				log.Printf("failed to delete old image %s from Imagekit: %v", oldFileID, delErr)
+			}
+		}(show.Images.FileID)
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "external image URL saved successfully", newImage)
+
+}

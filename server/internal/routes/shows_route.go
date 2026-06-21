@@ -21,6 +21,9 @@ func ShowsRoutes(r chi.Router, h *handlers.Handler) {
 			r.Post("/", h.CreateShows)
 			r.Delete("/{id}", h.DeleteShow)
 			r.Patch("/{id}", h.UpdateShow)
+
+			r.Post("/{id}/images/upload", h.UploadShowImage)
+			r.Post("/{id}/images/url", h.SaveExternalImageURL)
 		})
 	})
 }
