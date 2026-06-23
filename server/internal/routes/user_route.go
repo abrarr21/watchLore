@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/abrarr21/watchLore/internal/handlers"
+	"github.com/abrarr21/watchLore/internal/middlewares"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -20,5 +21,6 @@ func UserRoutes(r chi.Router, h *handlers.Handler) {
 		r.Post("/login", h.LoginUser)
 		r.Post("/refresh", h.RefreshToken)
 		r.Post("/logout", h.Logout)
+		r.With(middlewares.RequireAuth(h.Cfg.JWT.JWT_SECRET)).Get("/get-me", h.GetMe)
 	})
 }

@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/abrarr21/watchLore/internal/middlewares"
 	"github.com/abrarr21/watchLore/internal/models"
 	"github.com/abrarr21/watchLore/internal/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -198,5 +200,41 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	if err := utils.WriteJSON(w, http.StatusOK, "logged out successfully", nil); err != nil {
 		log.Printf("failed to encode response: %v", err)
+	}
+}
+
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	emailID, ok := middlewares.GetEmailID(r)
+	if !ok {
+		utils.WriteJSON(w, http.StatusUnauthorized, "Unauthorized User", nil)
+		return
+	}
+	emailID = strings.ToLower(emailID)
+	log.Println(emailID)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var user models.User
+	err := h.DB.Users.FindOne(ctx, bson.D{{Key: "email", Value: emailID}}).Decode(&user)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			utils.WriteJSON(w, http.StatusUnauthorized, "invalid credentials", nil)
+			return
+		}
+		log.Printf("GetMe: failed to fetch user (email=%s): %v", emailID, err)
+		utils.WriteJSON(w, http.StatusInternalServerError, "something went wrong", nil)
+		return
+	}
+
+	response := models.UserResponse{
+		ID:       user.ID.Hex(),
+		Name:     user.Name,
+		Username: user.Username,
+		Email:    user.Email,
+	}
+
+	if err := utils.WriteJSON(w, http.StatusOK, "User fetched successfully", response); err != nil {
+		log.Printf("GetMe: failed to encode response: %v", err)
 	}
 }
