@@ -549,7 +549,7 @@ func (h *Handler) GetTrendingShows(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Header.Set("Authorization", "Bearer "+tmdbToken)
-	req.Header.Set("accept", "appication/json")
+	req.Header.Set("accept", "application/json")
 
 	// 2. Perform the request
 	client := &http.Client{}

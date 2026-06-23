@@ -1,0 +1,13 @@
+linters:
+  enable:
+    - errcheck     # flags ignored error return values
+    - govet        # same as go vet
+    - staticcheck  # deep analysis, catches real bugs
+    - unused       # flags dead code
+    - misspell     # typos in comments and strings
+    - gocritic     # style and correctness suggestions
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters: [errcheck]  # test files get relaxed rules
