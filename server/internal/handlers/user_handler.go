@@ -86,8 +86,8 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.SetCookie(w, "accessToken", accessToken, 15*60)
-	utils.SetCookie(w, "refreshToken", refreshToken, 7*24*60*60)
+	utils.SetCookie(w, "accessToken", accessToken, int(h.Cfg.JWT.AccessTokenTTL.Seconds()))
+	utils.SetCookie(w, "refreshToken", refreshToken, int(h.Cfg.JWT.RefreshTokenTTL.Seconds()))
 
 	response := models.UserResponse{
 		ID:       user.ID.Hex(),
@@ -153,8 +153,8 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.SetCookie(w, "accessToken", accessToken, 15*60)
-	utils.SetCookie(w, "refreshToken", refreshToken, 7*24*60*60)
+	utils.SetCookie(w, "accessToken", accessToken, int(h.Cfg.JWT.AccessTokenTTL.Seconds()))
+	utils.SetCookie(w, "refreshToken", refreshToken, int(h.Cfg.JWT.RefreshTokenTTL.Seconds()))
 
 	response := models.UserResponse{
 		ID:       user.ID.Hex(),
@@ -188,7 +188,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.SetCookie(w, "accessToken", accessToken, 15*60)
+	utils.SetCookie(w, "accessToken", accessToken, int(h.Cfg.JWT.AccessTokenTTL.Seconds()))
 	if err := utils.WriteJSON(w, http.StatusOK, "token refreshed", nil); err != nil {
 		log.Printf("failed to encode response: %v", err)
 	}

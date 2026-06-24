@@ -1,6 +1,9 @@
 package utils
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 func SetCookie(w http.ResponseWriter, name, value string, maxAge int) {
 	http.SetCookie(w, &http.Cookie{
@@ -9,6 +12,7 @@ func SetCookie(w http.ResponseWriter, name, value string, maxAge int) {
 		HttpOnly: true,
 		Path:     "/",
 		MaxAge:   maxAge,
+		Expires:  time.Now().Add(time.Duration(maxAge) * time.Second),
 	})
 }
 
