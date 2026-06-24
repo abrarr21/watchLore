@@ -3,7 +3,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import Login from '../../features/auth/ui/Login';
 import Register from '../../features/auth/ui/Register';
 import { useEffect } from 'react';
-import { useAppDispatch } from '../hooks';
+import { useAppDispatch, useAppSelector } from '../hooks';
 import { currentLoggedInUser } from '../../features/auth/state/auth/authAction';
 import PublicRoute from '../protectedRoutes/PublicRoute';
 import ProtectedRoute from '../protectedRoutes/ProtectedRoute';
@@ -11,10 +11,12 @@ import DashboardLayout from '../layouts/DashboardLayout';
 
 const AppRoutes = () => {
   const dispatch = useAppDispatch();
+  const themeMode = useAppSelector((store) => store.theme.mode);
 
   useEffect(() => {
     dispatch(currentLoggedInUser());
-  }, []);
+    document.documentElement.setAttribute('data-theme', themeMode);
+  }, [themeMode]);
   const router = createBrowserRouter([
     {
       path: '/',
