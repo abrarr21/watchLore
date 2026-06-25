@@ -3,7 +3,7 @@ type StatusValue = 'watching' | 'completed' | 'planned' | 'dropped';
 type TypeValue = 'anime' | 'movie' | 'series';
 
 interface BadgeProps {
-  label: string;
+  label: string | number;
   variant?: BadgeVariant;
   status?: StatusValue;
   type?: TypeValue;
