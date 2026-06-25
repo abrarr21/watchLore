@@ -19,7 +19,7 @@ func UserRoutes(r chi.Router, h *handlers.Handler) {
 	r.Route("/auth/users", func(r chi.Router) {
 		r.Post("/register", h.RegisterUser)
 		r.Post("/login", h.LoginUser)
-		r.Post("/refresh", h.RefreshToken)
+		r.Get("/refresh", h.RefreshToken)
 		r.Post("/logout", h.Logout)
 		r.With(middlewares.RequireAuth(h.Cfg.JWT.JWT_SECRET)).Get("/get-me", h.GetMe)
 	})

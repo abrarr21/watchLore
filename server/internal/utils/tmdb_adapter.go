@@ -33,17 +33,28 @@ func MapTMDBToShowResponse(item models.TMDBItem) models.ShowsResponse {
 		posterURL = "https://image.tmdb.org/t/p/w500" + item.PosterPath
 	}
 
+	backdropURL := ""
+	if item.BackdropPath != "" {
+		backdropURL = "https://image.tmdb.org/t/p/w1280" + item.BackdropPath
+	}
+
 	return models.ShowsResponse{
-		ID:     fmt.Sprintf("tmdb_%d", item.ID),
-		Title:  title,
-		Type:   showType,
-		Genre:  genres,
-		Status: models.StatusPlanned, // Defualt
-		Rating: &item.VoteAverage,
+		ID:       fmt.Sprintf("tmdb_%d", item.ID),
+		Title:    title,
+		Type:     showType,
+		Genre:    genres,
+		Overview: &item.Overview,
+		Status:   models.StatusPlanned, // Defualt
+		Rating:   &item.VoteAverage,
 		Images: models.ShowsImage{
 			URL:    posterURL,
 			Name:   "tmdb_poster",
 			FileID: "external",
+		},
+		Backdrop: &models.ShowsImage{
+			URL:    backdropURL,
+			Name:   "tmdb_backdrop",
+			FileID: "external_backdrop",
 		},
 	}
 }

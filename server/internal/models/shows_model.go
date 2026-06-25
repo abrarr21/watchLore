@@ -80,6 +80,8 @@ type ShowsResponse struct {
 	Rating    *float64    `json:"rating,omitempty"`
 	Review    *string     `json:"review,omitempty"`
 	Images    ShowsImage  `json:"images"`
+	Backdrop  *ShowsImage `json:"backdrop_image,omitempty"`
+	Overview  *string     `json:"overview,omitempty"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
 }
@@ -97,13 +99,15 @@ type ExternalImageURLRequest struct {
 
 // TMDB structure
 type TMDBItem struct {
-	ID          int     `json:"id"`
-	Title       string  `json:"title,omitempty"` // User for movies
-	Name        string  `json:"name,omitempty"`  // used for tv/movies
-	MediaType   string  `json:"media_type"`
-	GenreIDs    []int   `json:"genre_ids"`
-	VoteAverage float64 `json:"vote_average"`
-	PosterPath  string  `json:"poster_path"`
+	ID           int     `json:"id"`
+	Title        string  `json:"title,omitempty"` // User for movies
+	Name         string  `json:"name,omitempty"`  // used for tv/movies
+	MediaType    string  `json:"media_type"`
+	GenreIDs     []int   `json:"genre_ids"`
+	VoteAverage  float64 `json:"vote_average"`
+	PosterPath   string  `json:"poster_path"`
+	BackdropPath string  `jon:"backdrop_path"`
+	Overview     string  `json:"overview"`
 }
 
 type TMDBResponse struct {

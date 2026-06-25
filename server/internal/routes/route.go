@@ -26,6 +26,7 @@ func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 
 	UserRoutes(r, h)
 	ShowsRoutes(r, h)
+	TMDBRoutes(r, h)
 
 	return r
 }

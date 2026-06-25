@@ -74,7 +74,7 @@ func Load() *Config {
 
 	tmdbKey := os.Getenv("TMDB_API_KEY")
 	if tmdbKey == "" {
-		log.Fatal("TMDB_API_KEY is not defined in .env file")
+		log.Println("Warning: TMDB_ACCESS_TOKEN is not defined in .env file. Content discovery will be unavailable.")
 	}
 
 	return &Config{

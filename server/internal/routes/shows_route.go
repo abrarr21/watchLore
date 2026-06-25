@@ -8,12 +8,6 @@ import (
 
 func ShowsRoutes(r chi.Router, h *handlers.Handler) {
 
-	r.Route("/api/discover", func(r chi.Router) {
-
-		// pubilc routes
-		r.Get("/trending", h.GetTrendingShows)
-	})
-
 	r.Route("/api/shows", func(r chi.Router) {
 
 		// pubilc routes
