@@ -19,7 +19,7 @@ const DiscoverPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
-      <Navbar currentPath="/" />
+      <Navbar currentPath="/home" />
 
       {/* Hero — flush to top, no padding, nav floats over it */}
       <HeroSection
