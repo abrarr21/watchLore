@@ -7,7 +7,11 @@ import { useAppDispatch, useAppSelector } from '../hooks';
 import { currentLoggedInUser } from '../../features/auth/state/auth/authAction';
 import PublicRoute from '../protectedRoutes/PublicRoute';
 import ProtectedRoute from '../protectedRoutes/ProtectedRoute';
-import DashboardLayout from '../layouts/DashboardLayout';
+import Landingpage from '../../pages/Landingpage';
+import DiscoverPage from '../../features/discover/ui/DiscoverPage';
+import MoviesPage from '../../features/movies/ui/MoviesPage';
+import SeriesPage from '../../features/series/ui/SeriesPage';
+import AnimePage from '../../features/anime/ui/AnimePage';
 
 const AppRoutes = () => {
   const dispatch = useAppDispatch();
@@ -18,6 +22,13 @@ const AppRoutes = () => {
     document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
   const router = createBrowserRouter([
+    // Public Routes
+    {
+      path: '/',
+      element: <Landingpage />,
+    },
+
+    // UNauthenticated routes (redirects to /home if user is logged in)
     {
       path: '/',
       element: <PublicRoute />,
@@ -27,7 +38,7 @@ const AppRoutes = () => {
           element: <AuthLayout />,
           children: [
             {
-              path: '',
+              path: 'login',
               element: <Login />,
             },
             {
@@ -41,12 +52,23 @@ const AppRoutes = () => {
 
     // Protected Routes
     {
-      path: '/home',
       element: <ProtectedRoute />,
       children: [
         {
-          path: '',
-          element: <DashboardLayout />,
+          path: 'home',
+          element: <DiscoverPage />,
+        },
+        {
+          path: 'movies',
+          element: <MoviesPage />,
+        },
+        {
+          path: 'series',
+          element: <SeriesPage />,
+        },
+        {
+          path: 'anime',
+          element: <AnimePage />,
         },
       ],
     },

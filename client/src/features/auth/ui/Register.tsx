@@ -197,7 +197,7 @@ const Register = () => {
               Already a member?{' '}
             </span>
 
-            <Link to="/" className="font-semibold text-[var(--color-primary)] hover:underline">
+            <Link to="/login" className="font-semibold text-[var(--color-primary)] hover:underline">
               Login here
             </Link>
           </div>
