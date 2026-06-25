@@ -26,7 +26,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		// Client's fault: Sent invalid form payload
-		utils.WriteError(w, fmt.Errorf("%w: invalid form data: %v", utils.ErrInvalidInput, err))
+		utils.WriteError(w, fmt.Errorf("%w: invalid form data: %w", utils.ErrInvalidInput, err))
 		return
 	}
 
@@ -184,19 +184,30 @@ func (h *Handler) DeleteShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, ok := middlewares.GetUserID(r)
+	if !ok {
+		utils.WriteError(w, fmt.Errorf("%w: user not authenticated", utils.ErrUnauthorized))
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		utils.WriteError(w, fmt.Errorf("%w: invalid user ID", utils.ErrInvalidInput))
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// fetch the show
+	// fetch the show with ownership check
 	var show models.Shows
-	err = h.DB.Shows.FindOne(ctx, bson.M{"_id": showId}).Decode(&show)
+	filter := bson.M{"_id": showId, "user_id": userObjID}
+	err = h.DB.Shows.FindOne(ctx, filter).Decode(&show)
 	if err != nil {
 		utils.WriteError(w, fmt.Errorf("%w: show not found", utils.ErrNotFound))
 		return
 	}
 
-	// delete from MongoDB
-	res, err := h.DB.Shows.DeleteOne(ctx, bson.M{"_id": showId})
+	// delete with ownership check
+	res, err := h.DB.Shows.DeleteOne(ctx, filter)
 	if err != nil {
 		utils.WriteError(w, fmt.Errorf("failed to delete show document: %w", err))
 		return
@@ -425,12 +436,10 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 		// Rollback newly uploaded image from imagekit if DB update fails
 		if delErr := h.Storage.DeleteImage(uploadImage.FileID); delErr != nil {
 			// 1. Log the critical rollback failure internally
-			if delErr := h.Storage.DeleteImage(uploadImage.FileID); delErr != nil {
-				slog.Error("image upload rollback failed (orphaned file left in storage)",
-					"fileID", uploadImage.FileID,
-					"err", delErr,
-				)
-			}
+			slog.Error("image upload rollback failed (orphaned file left in storage)",
+				"fileID", uploadImage.FileID,
+				"err", delErr,
+			)
 			// 2. Log the database error and return a safe HTTP 500 to the client
 			utils.WriteError(w, fmt.Errorf("failed to update show image in DB: %w", err))
 			return

@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 )
@@ -24,12 +25,19 @@ func WriteError(w http.ResponseWriter, err error) {
 	var data any
 
 	var appErr *AppError
-	if errors.As(err, &appErr) {
-		data = appErr.Data
-		err = appErr.Base // Unwrap it to match the switch categories below
-	}
+	var maxBytesErr *http.MaxBytesError
 
 	switch {
+	case errors.As(err, &maxBytesErr):
+		status = http.StatusRequestEntityTooLarge
+		limitMB := float64(maxBytesErr.Limit) / (1024 * 1024)
+		message = fmt.Sprintf("request payload too large: maximum allowed limit is %.1fMB", limitMB)
+		slog.Warn("request rejected: payload exceeded limit", "limit_bytes", maxBytesErr.Limit)
+
+	case errors.As(err, &appErr):
+		data = appErr.Data
+		err = appErr.Base // Unwrap it to match the switch categories below
+
 	case errors.Is(err, ErrNotFound):
 		status = http.StatusNotFound
 		message = "resource not found"
