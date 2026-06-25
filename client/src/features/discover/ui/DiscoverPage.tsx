@@ -5,21 +5,13 @@ import { ShowRow } from './ShowRow';
 import { SeriesCard } from './SeriesCard';
 import type { ShowCardData } from './ShowCard';
 import { useDiscover } from '../hooks/useDiscover';
-import { axiosInstance } from '../../../config/axiosInstance';
-import { useNavigate } from 'react-router';
-import { useAppDispatch } from '../../../app/hooks';
-import { removeUser } from '../../auth/state/auth/authSlice';
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import LoadingSkeleton from '../../../shared/ui/LoadingSkeleton';
 
 const DiscoverPage = () => {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-
   const { heroShow, trendingShows, trendingMovies, trendingAnime, trendingSeries, isPending } =
     useDiscover();
 
-  if (isPending || !heroShow) return <h1>Loading...</h1>;
+  if (isPending || !heroShow) return <LoadingSkeleton />;
 
   const handleCardClick = (show: ShowCardData) => {
     console.log('Navigate to show:', show.id);
@@ -27,21 +19,7 @@ const DiscoverPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
-      <Navbar
-        currentPath="/"
-        onLogout={async () => {
-          try {
-            await axiosInstance.post(`/auth/users/logout`);
-
-            // Remove user from redux
-            dispatch(removeUser());
-
-            navigate('/');
-          } catch (error) {
-            console.log('Failed to logout: ', error);
-          }
-        }}
-      />
+      <Navbar currentPath="/" />
 
       {/* Hero — flush to top, no padding, nav floats over it */}
       <HeroSection

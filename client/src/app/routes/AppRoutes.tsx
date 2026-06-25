@@ -22,19 +22,16 @@ const AppRoutes = () => {
     document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
   const router = createBrowserRouter([
-    // Public Routes
-    {
-      path: '/',
-      element: <Landingpage />,
-    },
-
     // UNauthenticated routes (redirects to /home if user is logged in)
     {
       path: '/',
       element: <PublicRoute />,
       children: [
         {
-          path: '',
+          index: true,
+          element: <Landingpage />,
+        },
+        {
           element: <AuthLayout />,
           children: [
             {

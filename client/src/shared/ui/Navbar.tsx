@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { Link } from 'react-router';
-import { useAppSelector } from '../../app/hooks';
+import { Link, useNavigate } from 'react-router';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { Lock, LogOut } from 'lucide-react';
+import { useLogout } from '../hooks/useLogout';
+import { removeUser } from '../../features/auth/state/auth/authSlice';
 
 type NavLink = { label: string; href: string; active?: boolean };
 
@@ -14,7 +16,6 @@ const NAV_LINKS: NavLink[] = [
 ];
 
 interface NavbarProps {
-  onLogout?: () => void;
   onVault?: () => void;
   currentPath?: string;
   showNavLinks?: boolean;
@@ -22,13 +23,27 @@ interface NavbarProps {
 }
 
 export function Navbar({
-  onLogout,
   onVault,
   currentPath = '/',
   showNavLinks = true,
   showSearch = true,
 }: NavbarProps) {
   const { user } = useAppSelector((store) => store.auth);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    try {
+      useLogout();
+
+      // remove user from redux
+      dispatch(removeUser());
+
+      navigate('/');
+    } catch (error) {
+      console.log(`Error logout: `, error);
+    }
+  };
 
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -123,7 +138,12 @@ export function Navbar({
 
           {/* Logout Button */}
           {user && (
-            <Button variant="primary" size="sm" className="flex-1 rounded-2xl" onClick={onLogout}>
+            <Button
+              variant="primary"
+              size="sm"
+              className="flex-1 rounded-2xl"
+              onClick={handleLogout}
+            >
               <LogOut size={16} />
             </Button>
           )}
