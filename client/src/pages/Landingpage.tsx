@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router';
-import { useAppSelector } from '../app/hooks';
 import { Navbar } from '../shared/ui/Navbar';
 import { Button } from '../shared/ui/Button';
 import { Badge } from '../shared/ui/Badge';
@@ -7,16 +6,12 @@ import { SHOWCASE_CARDS } from './Landingpage.constants';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { user } = useAppSelector((store) => store.auth);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--color-background)] text-[var(--color-on-background)] selection:bg-[var(--color-primary)] selection:text-[var(--color-on-primary)]">
       {/* Navigation */}
       <Navbar
-        isAuthenticated={!!user}
-        onLogin={() => navigate('/login')}
-        onRegister={() => navigate('/register')}
-        onVault={() => navigate('/home')}
+        onVault={() => navigate('/login')}
         currentPath="/"
         showNavLinks={false}
         showSearch={false}
