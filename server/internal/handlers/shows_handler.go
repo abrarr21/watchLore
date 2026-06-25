@@ -54,6 +54,21 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 		input.Review = &review
 	}
 
+	// parse optional overview
+	if overview := r.FormValue("overview"); overview != "" {
+		input.Overview = &overview
+	}
+
+	// Handle optional external backdrop URL
+	var backdropImage *models.ShowsImage
+	if backdropURL := r.FormValue("backdrop_url"); backdropURL != "" {
+		backdropImage = &models.ShowsImage{
+			URL:    backdropURL,
+			Name:   "external_backdrop",
+			FileID: "external_backdrop",
+		}
+	}
+
 	if err := utils.Validate(input); err != nil {
 		utils.WriteError(w, &utils.AppError{
 			Base: utils.ErrInvalidInput,
@@ -102,17 +117,19 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 
 	show := models.Shows{
-		ID:        bson.NewObjectID(),
-		UserID:    userObjID,
-		Title:     input.Title,
-		Type:      input.Type,
-		Genre:     input.Genre,
-		Status:    input.Status,
-		Rating:    input.Rating,
-		Review:    input.Review,
-		Images:    showImage,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:            bson.NewObjectID(),
+		UserID:        userObjID,
+		Title:         input.Title,
+		Type:          input.Type,
+		Genre:         input.Genre,
+		Status:        input.Status,
+		Rating:        input.Rating,
+		Review:        input.Review,
+		Overview:      input.Overview,
+		BackdropImage: backdropImage,
+		Images:        showImage,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
@@ -120,10 +137,16 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.DB.Shows.InsertOne(ctx, show)
 	if err != nil {
-		//Rollback image upload if DB insert fails
+		// Rollback poster image if uploaded
 		if showImage.FileID != "" {
 			if deleteErr := h.Storage.DeleteImage(showImage.FileID); deleteErr != nil {
-				log.Printf("rollback failed for fileID %s: %v", showImage.FileID, deleteErr)
+				log.Printf("rollback failed for poster fileID %s: %v", showImage.FileID, deleteErr)
+			}
+		}
+		// Rollback backdrop image if uploaded
+		if backdropImage != nil && backdropImage.FileID != "" && backdropImage.FileID != "external_backdrop" {
+			if deleteErr := h.Storage.DeleteImage(backdropImage.FileID); deleteErr != nil {
+				log.Printf("rollback failed for backdrop fileID %s: %v", backdropImage.FileID, deleteErr)
 			}
 		}
 		utils.WriteError(w, fmt.Errorf("failed to save show in DB: %w", err))
@@ -157,16 +180,18 @@ func (h *Handler) GetAllShows(w http.ResponseWriter, r *http.Request) {
 
 	for _, show := range shows {
 		response = append(response, models.ShowsResponse{
-			ID:        show.ID.Hex(),
-			Title:     show.Title,
-			Type:      show.Type,
-			Status:    show.Status,
-			Genre:     show.Genre,
-			Rating:    show.Rating,
-			Review:    show.Review,
-			Images:    show.Images,
-			CreatedAt: show.CreatedAt,
-			UpdatedAt: show.UpdatedAt,
+			ID:            show.ID.Hex(),
+			Title:         show.Title,
+			Type:          show.Type,
+			Status:        show.Status,
+			Genre:         show.Genre,
+			Rating:        show.Rating,
+			Review:        show.Review,
+			Overview:      show.Overview,
+			BackdropImage: show.BackdropImage,
+			Images:        show.Images,
+			CreatedAt:     show.CreatedAt,
+			UpdatedAt:     show.UpdatedAt,
 		})
 	}
 
@@ -255,16 +280,18 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := models.ShowsResponse{
-		ID:        show.ID.Hex(),
-		Title:     show.Title,
-		Type:      show.Type,
-		Status:    show.Status,
-		Genre:     show.Genre,
-		Rating:    show.Rating,
-		Review:    show.Review,
-		Images:    show.Images,
-		CreatedAt: show.CreatedAt,
-		UpdatedAt: show.UpdatedAt,
+		ID:            show.ID.Hex(),
+		Title:         show.Title,
+		Type:          show.Type,
+		Status:        show.Status,
+		Genre:         show.Genre,
+		Rating:        show.Rating,
+		Review:        show.Review,
+		Overview:      show.Overview,
+		BackdropImage: show.BackdropImage,
+		Images:        show.Images,
+		CreatedAt:     show.CreatedAt,
+		UpdatedAt:     show.UpdatedAt,
 	}
 
 	if err := utils.WriteJSON(w, http.StatusOK, "show fetched successfully", response); err != nil {

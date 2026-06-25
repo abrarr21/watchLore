@@ -51,7 +51,7 @@ func MapTMDBToShowResponse(item models.TMDBItem) models.ShowsResponse {
 			Name:   "tmdb_poster",
 			FileID: "external",
 		},
-		Backdrop: &models.ShowsImage{
+		BackdropImage: &models.ShowsImage{
 			URL:    backdropURL,
 			Name:   "tmdb_backdrop",
 			FileID: "external_backdrop",

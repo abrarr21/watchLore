@@ -48,42 +48,46 @@ func (s ShowsStatus) IsValid() bool {
 }
 
 type Shows struct {
-	ID        bson.ObjectID `bson:"_id,omitempty"`
-	UserID    bson.ObjectID `bson:"user_id"`
-	Title     string        `bson:"title"`
-	Type      ShowsType     `bson:"type"`
-	Genre     []string      `bson:"genre"`
-	Status    ShowsStatus   `bson:"status"`
-	Rating    *float64      `bson:"rating,omitempty"`
-	Review    *string       `bson:"review,omitempty"`
-	Images    ShowsImage    `bson:"images,omitempty"`
-	CreatedAt time.Time     `bson:"created_at"`
-	UpdatedAt time.Time     `bson:"updated_at"`
+	ID            bson.ObjectID `bson:"_id,omitempty"`
+	UserID        bson.ObjectID `bson:"user_id"`
+	Title         string        `bson:"title"`
+	Type          ShowsType     `bson:"type"`
+	Genre         []string      `bson:"genre"`
+	Status        ShowsStatus   `bson:"status"`
+	Rating        *float64      `bson:"rating,omitempty"`
+	Review        *string       `bson:"review,omitempty"`
+	Overview      *string       `bson:"overview,omitempty"`
+	Images        ShowsImage    `bson:"images,omitempty"`
+	BackdropImage *ShowsImage   `bson:"backdrop_image,omitempty"`
+	CreatedAt     time.Time     `bson:"created_at"`
+	UpdatedAt     time.Time     `bson:"updated_at"`
 }
 
 type ShowsRequest struct {
-	Title  string      `json:"title" validate:"required,min=1,max=200"`
-	Type   ShowsType   `json:"type" validate:"required"`
-	Genre  []string    `json:"genre" validate:"required,dive,min=1"`
-	Status ShowsStatus `json:"status" validate:"required"`
-	Rating *float64    `json:"rating,omitempty" validate:"omitempty,gte=0,lte=10"`
-	Review *string     `json:"review,omitempty"`
-	Images ShowsImage  `json:"images" validate:"omitempty"`
+	Title         string      `json:"title" validate:"required,min=1,max=200"`
+	Type          ShowsType   `json:"type" validate:"required"`
+	Genre         []string    `json:"genre" validate:"required,dive,min=1"`
+	Status        ShowsStatus `json:"status" validate:"required"`
+	Rating        *float64    `json:"rating,omitempty" validate:"omitempty,gte=0,lte=10"`
+	Review        *string     `json:"review,omitempty"`
+	Overview      *string     `json:"overview,omitempty"`
+	BackdropImage *ShowsImage `json:"backdrop_image,omitempty"`
+	Images        ShowsImage  `json:"images" validate:"omitempty"`
 }
 
 type ShowsResponse struct {
-	ID        string      `json:"id"`
-	Title     string      `json:"title"`
-	Type      ShowsType   `json:"type"`
-	Genre     []string    `json:"genre"`
-	Status    ShowsStatus `json:"status"`
-	Rating    *float64    `json:"rating,omitempty"`
-	Review    *string     `json:"review,omitempty"`
-	Images    ShowsImage  `json:"images"`
-	Backdrop  *ShowsImage `json:"backdrop_image,omitempty"`
-	Overview  *string     `json:"overview,omitempty"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID            string      `json:"id"`
+	Title         string      `json:"title"`
+	Type          ShowsType   `json:"type"`
+	Genre         []string    `json:"genre"`
+	Status        ShowsStatus `json:"status"`
+	Rating        *float64    `json:"rating,omitempty"`
+	Review        *string     `json:"review,omitempty"`
+	Images        ShowsImage  `json:"images"`
+	BackdropImage *ShowsImage `json:"backdrop_image,omitempty"`
+	Overview      *string     `json:"overview,omitempty"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }
 
 type UpdateShowsRequest struct {
@@ -106,7 +110,7 @@ type TMDBItem struct {
 	GenreIDs     []int   `json:"genre_ids"`
 	VoteAverage  float64 `json:"vote_average"`
 	PosterPath   string  `json:"poster_path"`
-	BackdropPath string  `jon:"backdrop_path"`
+	BackdropPath string  `json:"backdrop_path"`
 	Overview     string  `json:"overview"`
 }
 
