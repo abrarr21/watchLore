@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -70,8 +69,7 @@ func (h *Handler) discoverShows(w http.ResponseWriter, r *http.Request, endpoint
 
 	data, err := h.fetchTMDB(ctx, endpoint, r.URL.Query())
 	if err != nil {
-		log.Printf("TMDB Discovery Error: %v", err)
-		utils.WriteJSON(w, http.StatusBadGateway, "failed to fetch discovery content", nil)
+		utils.WriteError(w, fmt.Errorf("%w: TMDB discover content fetch failure: %v", utils.ErrBadGateway, err))
 		return
 	}
 
@@ -89,7 +87,7 @@ func (h *Handler) GetContentByType(w http.ResponseWriter, r *http.Request) {
 
 	endpoint, ok := contentEndpoints[contentType]
 	if !ok {
-		utils.WriteJSON(w, http.StatusNotFound, "unknown discovery content type", nil)
+		utils.WriteError(w, fmt.Errorf("%w: unknown discover content type: %s", utils.ErrNotFound, contentType))
 		return
 	}
 

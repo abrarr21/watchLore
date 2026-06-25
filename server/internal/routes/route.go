@@ -9,6 +9,8 @@ import (
 
 func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 	r := chi.NewRouter()
+
+	r.Use(middleware.Recoverer) // Handles any panic and returns a 500 error
 	r.Use(middleware.Logger)
 
 	// 2. Add Chi's CORS middleware configuration

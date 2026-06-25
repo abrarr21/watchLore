@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -26,21 +27,22 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&input); err != nil {
-		log.Printf("failed to decode input body: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+		utils.WriteError(w, fmt.Errorf("%w, failed to parse request body: %v", utils.ErrInvalidInput, err))
 		return
 	}
 
-	if err := utils.Validate(input); err != nil {
-		log.Printf("failed to validate request inputs: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "request validation failed", err)
+	if valErrors := utils.Validate(input); valErrors != nil {
+		utils.WriteError(w, &utils.AppError{
+			Base: utils.ErrInvalidInput,
+			Msg:  "request validation failed",
+			Data: valErrors,
+		})
 		return
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("failed to hash the password: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "internal server error", nil)
+		utils.WriteError(w, fmt.Errorf("failed to hash the password: %w", err))
 		return
 	}
 
@@ -62,11 +64,13 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	result, err := h.DB.Users.InsertOne(ctx, user)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			utils.WriteJSON(w, http.StatusConflict, "The provided email address or username is already registered.", nil)
+			utils.WriteError(w, &utils.AppError{
+				Base: utils.ErrAlreadyExists,
+				Msg:  "The provided email address or username is already registered",
+			})
 			return
 		}
-		log.Printf("failed to insert user: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create user", nil)
+		utils.WriteError(w, fmt.Errorf("failed to insert user: %w", err))
 		return
 	}
 
@@ -74,15 +78,13 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	accessToken, err := utils.GenerateToken(user.ID.Hex(), user.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.AccessTokenTTL)
 	if err != nil {
-		log.Printf("failed to generate token: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create user session", nil)
+		utils.WriteError(w, fmt.Errorf("failed to generate access token: %w", err))
 		return
 	}
 
 	refreshToken, err := utils.GenerateToken(user.ID.Hex(), user.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.RefreshTokenTTL)
 	if err != nil {
-		log.Printf("failed to generate token: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create user session", nil)
+		utils.WriteError(w, fmt.Errorf("failed to generate refresh token: %w", err))
 		return
 	}
 
@@ -110,14 +112,16 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&input); err != nil {
-		log.Printf("failed to decode input body: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+		utils.WriteError(w, fmt.Errorf("%w, failed to parse request body: %v", utils.ErrInvalidInput, err))
 		return
 	}
 
 	if err := utils.Validate(input); err != nil {
-		log.Printf("failed to validate login request body: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "request validation failed", nil)
+		utils.WriteError(w, &utils.AppError{
+			Base: utils.ErrInvalidInput,
+			Msg:  "request validation failed",
+			Data: err,
+		})
 		return
 	}
 
@@ -130,26 +134,25 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.DB.Users.FindOne(ctx, bson.D{{Key: "email", Value: input.Email}}).Decode(&user)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusUnauthorized, "invalid credentials", nil)
+		// 1. Client's fault: Email was not found in DB
+		utils.WriteError(w, fmt.Errorf("%w: invalid credentials", utils.ErrUnauthorized))
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		utils.WriteJSON(w, http.StatusUnauthorized, "invalid credentials", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid credentials", utils.ErrUnauthorized))
 		return
 	}
 
 	accessToken, err := utils.GenerateToken(user.ID.Hex(), user.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.AccessTokenTTL)
 	if err != nil {
-		log.Printf("failed to generate token: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create user session", nil)
+		utils.WriteError(w, fmt.Errorf("failed to generate access token: %w", err))
 		return
 	}
 
 	refreshToken, err := utils.GenerateToken(user.ID.Hex(), user.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.RefreshTokenTTL)
 	if err != nil {
-		log.Printf("failed to generate token: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create user session", nil)
+		utils.WriteError(w, fmt.Errorf("failed to generate refresh token: %w", err))
 		return
 	}
 
@@ -171,20 +174,19 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refreshToken")
 	if err != nil {
-		utils.WriteJSON(w, http.StatusUnauthorized, "missing refresh token", nil)
+		utils.WriteError(w, fmt.Errorf("%w: missing refresh token", utils.ErrUnauthorized))
 		return
 	}
 
 	claims, err := utils.ParseToken(cookie.Value, h.Cfg.JWT.JWT_SECRET)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusUnauthorized, "invalid or expired refresh token", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid or expired refresh token", utils.ErrUnauthorized))
 		return
 	}
 
 	accessToken, err := utils.GenerateToken(claims.UserID, claims.Email, h.Cfg.JWT.JWT_SECRET, h.Cfg.JWT.AccessTokenTTL)
 	if err != nil {
-		log.Printf("refresh: generate access token: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to refresh token", nil)
+		utils.WriteError(w, fmt.Errorf("refresh token: failed to generate access token: %w", err))
 		return
 	}
 
@@ -206,7 +208,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	emailID, ok := middlewares.GetEmailID(r)
 	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, "Unauthorized User", nil)
+		utils.WriteError(w, fmt.Errorf("%w, unauthorized user", utils.ErrUnauthorized))
 		return
 	}
 	emailID = strings.ToLower(emailID)
@@ -219,11 +221,10 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	err := h.DB.Users.FindOne(ctx, bson.D{{Key: "email", Value: emailID}}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			utils.WriteJSON(w, http.StatusUnauthorized, "invalid credentials", nil)
+			utils.WriteError(w, fmt.Errorf("%w: invalid credentials", utils.ErrUnauthorized))
 			return
 		}
-		log.Printf("GetMe: failed to fetch user (email=%s): %v", emailID, err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "something went wrong", nil)
+		utils.WriteError(w, fmt.Errorf("GetMe: failed to fetch user: %w", err))
 		return
 	}
 

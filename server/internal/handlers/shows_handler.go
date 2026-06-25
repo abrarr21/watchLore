@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -23,7 +25,8 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid form data", nil)
+		// Client's fault: Sent invalid form payload
+		utils.WriteError(w, fmt.Errorf("%w: invalid form data: %v", utils.ErrInvalidInput, err))
 		return
 	}
 
@@ -40,7 +43,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	if ratingStr := r.FormValue("rating"); ratingStr != "" {
 		rating, err := strconv.ParseFloat(ratingStr, 64)
 		if err != nil {
-			utils.WriteJSON(w, http.StatusBadRequest, "invalid rating format", nil)
+			utils.WriteError(w, fmt.Errorf("%w: invalid rating format", utils.ErrInvalidInput))
 			return
 		}
 		input.Rating = &rating
@@ -52,30 +55,33 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := utils.Validate(input); err != nil {
-		log.Printf("failed to validate request inputs: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, "request validation failed", err)
+		utils.WriteError(w, &utils.AppError{
+			Base: utils.ErrInvalidInput,
+			Msg:  "request validation failed",
+			Data: err,
+		})
 		return
 	}
 
 	if !input.Type.IsValid() {
-		utils.WriteJSON(w, http.StatusBadRequest, "type must be one of: anime, movie, series", nil)
+		utils.WriteError(w, fmt.Errorf("%w: type must be one of: anime, movie, series", utils.ErrInvalidInput))
 		return
 	}
 
 	if !input.Status.IsValid() {
-		utils.WriteJSON(w, http.StatusBadRequest, "status must be one of: completed, watching, planned", nil)
+		utils.WriteError(w, fmt.Errorf("%w: status must be one of: completed, watching, planned", utils.ErrInvalidInput))
 		return
 	}
 
 	userID, ok := middlewares.GetUserID(r)
 	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		utils.WriteError(w, fmt.Errorf("%w: user not authenticated", utils.ErrUnauthorized))
 		return
 	}
 
 	userObjID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid user ID", utils.ErrInvalidInput))
 		return
 	}
 
@@ -87,8 +93,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		uploaded, err := h.Storage.UploadImage(file, header.Filename)
 		if err != nil {
-			log.Printf("failed to upload image: %v", err)
-			utils.WriteJSON(w, http.StatusInternalServerError, "failed to uplaod image", nil)
+			utils.WriteError(w, fmt.Errorf("ImageKit upload failure: %w", err))
 			return
 		}
 		showImage = *uploaded
@@ -121,8 +126,7 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 				log.Printf("rollback failed for fileID %s: %v", showImage.FileID, deleteErr)
 			}
 		}
-		log.Printf("db insert failed: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to create show", nil)
+		utils.WriteError(w, fmt.Errorf("failed to save show in DB: %w", err))
 		return
 	}
 
@@ -137,8 +141,7 @@ func (h *Handler) GetAllShows(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := h.DB.Shows.Find(ctx, bson.D{}, opts)
 	if err != nil {
-		log.Printf("failed to fetch shows: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to fetch notes", nil)
+		utils.WriteError(w, fmt.Errorf("database query failed to fetch show: %w", err))
 		return
 	}
 	defer cursor.Close(ctx)
@@ -146,8 +149,7 @@ func (h *Handler) GetAllShows(w http.ResponseWriter, r *http.Request) {
 	var shows []models.Shows
 
 	if err := cursor.All(ctx, &shows); err != nil {
-		log.Printf("failed to decode shows: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to decode shows", nil)
+		utils.WriteError(w, fmt.Errorf("failed to decode show record from database cursor: %w", err))
 		return
 	}
 
@@ -178,7 +180,7 @@ func (h *Handler) DeleteShow(w http.ResponseWriter, r *http.Request) {
 
 	showId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid show ID format", utils.ErrInvalidInput))
 		return
 	}
 
@@ -189,15 +191,14 @@ func (h *Handler) DeleteShow(w http.ResponseWriter, r *http.Request) {
 	var show models.Shows
 	err = h.DB.Shows.FindOne(ctx, bson.M{"_id": showId}).Decode(&show)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusNotFound, "show not found", nil)
+		utils.WriteError(w, fmt.Errorf("%w: show not found", utils.ErrNotFound))
 		return
 	}
 
 	// delete from MongoDB
 	res, err := h.DB.Shows.DeleteOne(ctx, bson.M{"_id": showId})
 	if err != nil {
-		log.Printf("failed to delete show %s: %v", id, err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to delte show", nil)
+		utils.WriteError(w, fmt.Errorf("failed to delete show document: %w", err))
 		return
 	}
 
@@ -209,7 +210,7 @@ func (h *Handler) DeleteShow(w http.ResponseWriter, r *http.Request) {
 	// delete image from imageKit
 	if show.Images.FileID != "" {
 		if err := h.Storage.DeleteImage(show.Images.FileID); err != nil {
-			log.Printf("failed to delete image %s: %v", show.Images.FileID, err)
+			slog.Error("failed to delete image from ImageKit", "imgFile", show.Images.FileID, "err", err)
 		}
 	}
 
@@ -223,7 +224,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 
 	showId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid show ID format", utils.ErrInvalidInput))
 		return
 	}
 
@@ -234,12 +235,11 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	err = h.DB.Shows.FindOne(ctx, bson.M{"_id": showId}).Decode(&show)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			utils.WriteJSON(w, http.StatusNotFound, "show not found", nil)
+			utils.WriteError(w, fmt.Errorf("%w: show not found", utils.ErrNotFound))
 			return
 		}
 
-		log.Printf("failed to fetch show: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to fetch show", nil)
+		utils.WriteError(w, fmt.Errorf("failed to retrieve show: %w", err))
 		return
 	}
 
@@ -267,19 +267,19 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	showId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid show ID format", utils.ErrInvalidInput))
 		return
 	}
 
 	userID, ok := middlewares.GetUserID(r)
 	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		utils.WriteError(w, fmt.Errorf("%w: user not authenticated", utils.ErrUnauthorized))
 		return
 	}
 
 	userObjID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid user id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid user ID", utils.ErrInvalidInput))
 		return
 	}
 
@@ -287,12 +287,16 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&input); err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "failed to parse request body", nil)
+		utils.WriteError(w, fmt.Errorf("%w: failed to parse request body: %v", utils.ErrInvalidInput, err))
 		return
 	}
 
 	if err := utils.Validate(input); err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "validation failed", nil)
+		utils.WriteError(w, &utils.AppError{
+			Base: utils.ErrInvalidInput,
+			Msg:  "validation failed",
+			Data: err,
+		})
 		return
 	}
 
@@ -301,7 +305,7 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 
 	if input.Status != nil {
 		if !input.Status.IsValid() {
-			utils.WriteJSON(w, http.StatusBadRequest, "status must be one of: completed, watching, planned", nil)
+			utils.WriteError(w, fmt.Errorf("%w: status must be one of: completed, watching, planned", utils.ErrInvalidInput))
 			return
 		}
 		updateDoc["status"] = *input.Status
@@ -320,7 +324,7 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(updateDoc) == 0 {
-		utils.WriteJSON(w, http.StatusBadRequest, "no valid fields provided for update", nil)
+		utils.WriteError(w, fmt.Errorf("%w: no valid fields provided for update", utils.ErrInvalidInput))
 		return
 	}
 
@@ -335,14 +339,13 @@ func (h *Handler) UpdateShow(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.DB.Shows.UpdateOne(ctx, filter, update)
 	if err != nil {
-		log.Printf("failed to update show %s: %v", id, err)
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to update show", nil)
+		utils.WriteError(w, fmt.Errorf("failed to update show document: %w", err))
 		return
 	}
 
 	if res.MatchedCount == 0 {
 		// Show either doens't exist or doesn't belong to the logged-in user
-		utils.WriteJSON(w, http.StatusNotFound, "show not found or StatusUnauthorized", nil)
+		utils.WriteError(w, fmt.Errorf("%w: show not found or you do not have permission to edit it", utils.ErrNotFound))
 		return
 	}
 
@@ -353,19 +356,19 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	showId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid show ID format", utils.ErrInvalidInput))
 		return
 	}
 
 	userID, ok := middlewares.GetUserID(r)
 	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, "user not authenticated", nil)
+		utils.WriteError(w, fmt.Errorf("%w: user not authenticated", utils.ErrUnauthorized))
 		return
 	}
 
 	userObjID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid user ID", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid user ID", utils.ErrInvalidInput))
 		return
 	}
 
@@ -375,13 +378,13 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 	// parse the multipart form
 	err = r.ParseMultipartForm(10 << 20) // 10 MB in memroy buffer
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "file size exceeds 10MB limit or invalid form", nil)
+		utils.WriteError(w, fmt.Errorf("%w: file size exceeds 10MB limit or invalid form parameters", utils.ErrInvalidInput))
 		return
 	}
 
 	file, header, err := r.FormFile("image")
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "missing image file in request form", nil)
+		utils.WriteError(w, fmt.Errorf("%w: missing image file in request form", utils.ErrInvalidInput))
 		return
 	}
 	defer file.Close()
@@ -395,18 +398,17 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 	err = h.DB.Shows.FindOne(ctx, filter).Decode(&show)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			utils.WriteJSON(w, http.StatusNotFound, "show not found or unauthorized", nil)
+			utils.WriteError(w, fmt.Errorf("%w: show not found or unauthorized", utils.ErrNotFound))
 			return
 		}
-		utils.WriteJSON(w, http.StatusInternalServerError, "failed to query show", nil)
+		utils.WriteError(w, fmt.Errorf("database query failure: %w", err))
 		return
 	}
 
 	// Upload the new image
 	uploadImage, err := h.Storage.UploadImage(file, header.Filename)
 	if err != nil {
-		log.Printf("image upload faild: %v", err)
-		utils.WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
+		utils.WriteError(w, fmt.Errorf("%w: image file upload error: %v", utils.ErrInvalidInput, err))
 		return
 	}
 
@@ -422,9 +424,15 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Rollback newly uploaded image from imagekit if DB update fails
 		if delErr := h.Storage.DeleteImage(uploadImage.FileID); delErr != nil {
-			log.Printf("rollback failed for fileID %s: %v", uploadImage.FileID, delErr)
-			log.Printf("failed to update show image in DB: %v", err)
-			utils.WriteJSON(w, http.StatusInternalServerError, "failed to save image metadata", nil)
+			// 1. Log the critical rollback failure internally
+			if delErr := h.Storage.DeleteImage(uploadImage.FileID); delErr != nil {
+				slog.Error("image upload rollback failed (orphaned file left in storage)",
+					"fileID", uploadImage.FileID,
+					"err", delErr,
+				)
+			}
+			// 2. Log the database error and return a safe HTTP 500 to the client
+			utils.WriteError(w, fmt.Errorf("failed to update show image in DB: %w", err))
 			return
 		}
 
@@ -435,7 +443,10 @@ func (h *Handler) UploadShowImage(w http.ResponseWriter, r *http.Request) {
 		go func(oldFileID string) {
 			// run in background to not block client response
 			if delErr := h.Storage.DeleteImage(oldFileID); delErr != nil {
-				log.Printf("failed to delete old image %s: %v", oldFileID, delErr)
+				slog.Error("failed to delete old image from storage during update",
+					"oldFileID", oldFileID,
+					"err", delErr,
+				)
 			}
 		}(show.Images.FileID)
 	}
@@ -449,7 +460,7 @@ func (h *Handler) SaveExternalImageURL(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	showId, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, "invalid show id", nil)
+		utils.WriteError(w, fmt.Errorf("%w: invalid show ID format", utils.ErrInvalidInput))
 		return
 	}
 
