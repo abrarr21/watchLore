@@ -7,6 +7,8 @@ export interface ShowPayload {
   rating?: number;
   imageUrl?: string;
   status?: 'watching' | 'completed' | 'planned';
+  overview?: string;
+  backDropImage?: string;
 }
 
 const addShowToVaultAPI = async (showType: ShowPayload) => {
@@ -22,6 +24,14 @@ const addShowToVaultAPI = async (showType: ShowPayload) => {
 
   if (showType.genre && showType.genre.length > 0) {
     showType.genre.forEach((g) => formData.append('genre', g));
+  }
+
+  // Inside addShowToVaultAPI function, before Step 1:
+  if (showType.overview) {
+    formData.append('overview', showType.overview);
+  }
+  if (showType.backDropImage) {
+    formData.append('backdrop_url', showType.backDropImage);
   }
   // Step 1: Create the show record
   const createRes = await axiosInstance.post('/api/shows', formData, {

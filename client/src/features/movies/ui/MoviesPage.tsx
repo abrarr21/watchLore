@@ -7,6 +7,7 @@ import { useMovie } from '../hooks/useMovie';
 import { useEffect, useRef } from 'react';
 import addShowToVaultAPI from '../../../shared/api/AddShowToVaultApi';
 import { useVaultShow } from '../../../shared/hooks/useVaultShow';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface MoviesDATA {
   id: string;
@@ -20,6 +21,9 @@ interface MoviesDATA {
   genre: string[];
   overview: string;
   status?: string;
+  backdrop_image: {
+    url: string;
+  };
 }
 
 const TOP_GENRES = ['Drama', 'Action', 'Comedy', 'Thriller', 'Adventure'];
@@ -28,10 +32,21 @@ const MoviesPage = () => {
   const { movies, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useMovie();
 
   const { vault } = useVaultShow();
-  console.log(vault);
+  // console.log(vault);
+
+  const queryClient = useQueryClient();
+  const { mutate: addToVault, isPending: isAdding } = useMutation({
+    mutationFn: addShowToVaultAPI,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['vaultShows'] });
+      alert(`${variables.title} - added to vault`);
+    },
+    onError: (error) => {
+      console.log('Failed to add movie to vault: ', error);
+    },
+  });
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
   // Set up intersection observer to detect when user reaches bottom
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return;
@@ -53,22 +68,6 @@ const MoviesPage = () => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isPending || !movies) return <LoadingSkeleton />;
-
-  const handleAddToVault = async (movie: MoviesDATA) => {
-    try {
-      await addShowToVaultAPI({
-        title: movie.title,
-        type: 'movie',
-        genre: movie.genre,
-        rating: movie.rating,
-        imageUrl: movie.images.url,
-        status: 'planned',
-      });
-      alert(`${movie.title} - succesfully added to vault`);
-    } catch (error) {
-      console.log(`Failed to add movie in vault: `, error);
-    }
-  };
 
   return (
     <>
@@ -135,10 +134,19 @@ const MoviesPage = () => {
                     <Button
                       variant={isAlreadyAdded ? 'secondary' : 'primary'}
                       size="xs"
-                      disabled={isAlreadyAdded}
+                      disabled={isAlreadyAdded || isAdding}
                       onClick={(e) => {
                         e.stopPropagation(); // Avoid triggering details click handlers
-                        handleAddToVault(card);
+                        addToVault({
+                          title: card.title,
+                          type: 'movie',
+                          genre: card.genre,
+                          rating: card.rating,
+                          imageUrl: card.images.url,
+                          status: 'planned',
+                          overview: card.overview,
+                          backDropImage: card.backdrop_image.url,
+                        });
                       }}
                     >
                       {isAlreadyAdded ? (
