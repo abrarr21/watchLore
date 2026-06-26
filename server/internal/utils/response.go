@@ -27,16 +27,18 @@ func WriteError(w http.ResponseWriter, err error) {
 	var appErr *AppError
 	var maxBytesErr *http.MaxBytesError
 
+	// Extract AppError first so we can check its Base error in the switch below
+	if errors.As(err, &appErr) {
+		data = appErr.Data
+		err = appErr.Base // Unwrap it to match the switch categories below
+	}
+
 	switch {
 	case errors.As(err, &maxBytesErr):
 		status = http.StatusRequestEntityTooLarge
 		limitMB := float64(maxBytesErr.Limit) / (1024 * 1024)
 		message = fmt.Sprintf("request payload too large: maximum allowed limit is %.1fMB", limitMB)
 		slog.Warn("request rejected: payload exceeded limit", "limit_bytes", maxBytesErr.Limit)
-
-	case errors.As(err, &appErr):
-		data = appErr.Data
-		err = appErr.Base // Unwrap it to match the switch categories below
 
 	case errors.Is(err, ErrNotFound):
 		status = http.StatusNotFound

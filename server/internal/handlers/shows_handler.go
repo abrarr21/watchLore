@@ -157,12 +157,24 @@ func (h *Handler) CreateShows(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAllShows(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewares.GetUserID(r)
+	if !ok {
+		utils.WriteError(w, fmt.Errorf("%w: user not authenticated", utils.ErrUnauthorized))
+		return
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		utils.WriteError(w, fmt.Errorf("%w: invalid user ID", utils.ErrInvalidInput))
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
 	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}})
 
-	cursor, err := h.DB.Shows.Find(ctx, bson.D{}, opts)
+	cursor, err := h.DB.Shows.Find(ctx, bson.M{"user_id": userObjID}, opts)
 	if err != nil {
 		utils.WriteError(w, fmt.Errorf("database query failed to fetch show: %w", err))
 		return

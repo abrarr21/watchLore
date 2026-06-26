@@ -23,7 +23,7 @@ func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 	r.Use(cors.Handler(cors.Options{
 		// Set to your frontend domain in production (e.g. []string{"https://watchlore.onrender.com"})
 		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,

@@ -14,13 +14,13 @@ func ShowsRoutes(r chi.Router, h *handlers.Handler) {
 		r.Group(func(r chi.Router) {
 			r.Use(middlewares.LimitBodySize(200 * 1024))
 
-			r.Get("/", h.GetAllShows)
 			r.Get("/{id}", h.GetById)
 
 			// protected routes
 			r.Group(func(r chi.Router) {
 				r.Use(middlewares.RequireAuth(h.Cfg.JWT.JWT_SECRET))
 
+				r.Get("/", h.GetAllShows)
 				r.Delete("/{id}", h.DeleteShow)
 				r.Patch("/{id}", h.UpdateShow)
 				r.Post("/{id}/images/url", h.SaveExternalImageURL)
