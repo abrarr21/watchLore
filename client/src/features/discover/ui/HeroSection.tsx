@@ -13,6 +13,9 @@ export interface HeroShow {
   type: 'anime' | 'movie' | 'series';
   year?: string | number;
   overview?: string;
+  backdrop_image?: {
+    url: string;
+  };
 }
 
 interface HeroSectionProps {
@@ -30,7 +33,7 @@ export function HeroSection({ show, onAddToVault, onViewTrailer }: HeroSectionPr
       {/* Backdrop */}
       <div className="absolute inset-0">
         <img
-          src={show.images.url}
+          src={show.backdrop_image?.url}
           alt={show.title}
           className="h-full w-full object-cover object-center"
         />

@@ -8,6 +8,7 @@ import { Button } from '../../../shared/ui/Button';
 import { Plus } from 'lucide-react';
 import { Navbar } from '../../../shared/ui/Navbar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
 
 interface AnimeDATA {
   id: string;
@@ -27,6 +28,8 @@ interface AnimeDATA {
 }
 
 const MoviesPage = () => {
+  const navigate = useNavigate();
+
   const { anime, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useAnime();
 
   const { vault } = useVaultShow();
@@ -70,7 +73,7 @@ const MoviesPage = () => {
 
   return (
     <>
-      <Navbar currentPath="/anime" />
+      <Navbar currentPath="/anime" onVault={() => navigate('/vault')} />
 
       <section className="border-t border-[var(--color-divider)] bg-[var(--color-surface-container-lowest)] py-24">
         <div className="mx-auto max-w-[var(--layout-container-max)] px-[var(--layout-margin-desktop)] max-md:px-5">

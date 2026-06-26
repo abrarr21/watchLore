@@ -6,8 +6,11 @@ import { SeriesCard } from './SeriesCard';
 import type { ShowCardData } from './ShowCard';
 import { useDiscover } from '../hooks/useDiscover';
 import LoadingSkeleton from '../../../shared/ui/LoadingSkeleton';
+import { useNavigate } from 'react-router';
 
 const DiscoverPage = () => {
+  const navigate = useNavigate();
+
   const { heroShow, trendingShows, trendingMovies, trendingAnime, trendingSeries, isPending } =
     useDiscover();
 
@@ -19,7 +22,7 @@ const DiscoverPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
-      <Navbar currentPath="/home" />
+      <Navbar currentPath="/home" onVault={() => navigate('/vault')} />
 
       {/* Hero — flush to top, no padding, nav floats over it */}
       <HeroSection

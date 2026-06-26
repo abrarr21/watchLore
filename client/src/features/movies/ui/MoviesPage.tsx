@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
 import addShowToVaultAPI from '../../../shared/api/AddShowToVaultApi';
 import { useVaultShow } from '../../../shared/hooks/useVaultShow';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
 
 interface MoviesDATA {
   id: string;
@@ -29,6 +30,8 @@ interface MoviesDATA {
 const TOP_GENRES = ['Drama', 'Action', 'Comedy', 'Thriller', 'Adventure'];
 
 const MoviesPage = () => {
+  const navigate = useNavigate();
+
   const { movies, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useMovie();
 
   const { vault } = useVaultShow();
@@ -71,7 +74,7 @@ const MoviesPage = () => {
 
   return (
     <>
-      <Navbar currentPath="/movies" />
+      <Navbar currentPath="/movies" onVault={() => navigate('/vault')} />
 
       <section className="border-t border-[var(--color-divider)] bg-[var(--color-surface-container-lowest)] py-24">
         <div className="mx-auto max-w-[var(--layout-container-max)] px-[var(--layout-margin-desktop)] max-md:px-5">
