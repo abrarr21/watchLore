@@ -159,7 +159,8 @@ const Register = () => {
                   className="w-full rounded-md border border-[var(--color-outline-variant)] px-4 py-3 pr-12 outline-none"
                   {...registerRegister('confirmPassword', {
                     required: 'Confirm your password',
-                    validate: (value) => value === password || 'Passwords do not match',
+                    validate: (value, formValues) =>
+                      value === formValues.password || 'Passwords do not match',
                   })}
                 />
 

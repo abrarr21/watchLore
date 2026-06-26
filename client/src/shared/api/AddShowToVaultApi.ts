@@ -9,6 +9,8 @@ export interface ShowPayload {
   status?: 'watching' | 'completed' | 'planned';
   overview?: string;
   backDropImage?: string;
+  review?: string;
+  imageFile?: File;
 }
 
 const addShowToVaultAPI = async (showType: ShowPayload) => {
@@ -30,9 +32,19 @@ const addShowToVaultAPI = async (showType: ShowPayload) => {
   if (showType.overview) {
     formData.append('overview', showType.overview);
   }
+
   if (showType.backDropImage) {
     formData.append('backdrop_url', showType.backDropImage);
   }
+
+  if (showType.review) {
+    formData.append('review', showType.review);
+  }
+
+  if (showType.imageFile) {
+    formData.append('image', showType.imageFile);
+  }
+
   // Step 1: Create the show record
   const createRes = await axiosInstance.post('/api/shows', formData, {
     headers: {

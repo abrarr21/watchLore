@@ -148,6 +148,7 @@ export function VaultPage() {
             {filteredShows.map((show: any) => (
               <div
                 key={show.id || show.ID}
+                onClick={() => navigate(`/vault/${show.id || show.ID}`)}
                 className="group flex cursor-pointer flex-col overflow-hidden rounded-[var(--radius-md)] border border-white/5 bg-[var(--color-surface-container-lowest)] transition-all duration-300 hover:border-white/10 hover:shadow-xl"
               >
                 {/* Poster Cover container */}
@@ -198,7 +199,7 @@ export function VaultPage() {
 
       {/* Floating Action Button (FAB) */}
       <button
-        onClick={() => navigate('/movies')}
+        onClick={() => navigate('/add-to-vault')}
         aria-label="Add new titles"
         className="fixed right-8 bottom-8 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-lg transition-all select-none hover:bg-[var(--color-primary-container)] active:scale-95"
       >

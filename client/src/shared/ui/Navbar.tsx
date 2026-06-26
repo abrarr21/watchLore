@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Link, useNavigate } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { Lock, LogOut } from 'lucide-react';
+import { Lock, LogOut, Sun, Moon, Search, Menu, X } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import { removeUser } from '../../features/auth/state/auth/authSlice';
 
@@ -58,6 +58,27 @@ export function Navbar({
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  // Lock background scroll while the mobile drawer is open.
+  useEffect(() => {
+    if (mobileOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+  }, [mobileOpen]);
+
+  // Close the drawer automatically if the viewport grows back to desktop size.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) setMobileOpen(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
@@ -72,11 +93,11 @@ export function Navbar({
           : 'bg-transparent'
       } `}
     >
-      <div className="mx-auto flex h-18 max-w-[var(--layout-container-max)] items-center justify-between gap-6 px-[var(--layout-margin-desktop)] max-md:px-5 md:h-22">
+      <div className="mx-auto flex h-16 max-w-[var(--layout-container-max)] items-center justify-between gap-6 px-[var(--layout-margin-desktop)] max-md:px-4 md:h-22">
         {/* Logo */}
         <Link
           to="/"
-          className="flex-shrink-0 font-display text-2xl font-bold tracking-tight text-[var(--color-primary)] transition-colors duration-[var(--transition-duration-fast)] hover:text-[var(--color-primary-container)] md:text-3xl"
+          className="flex-shrink-0 font-display text-xl font-bold tracking-tight text-[var(--color-primary)] transition-colors duration-[var(--transition-duration-fast)] hover:text-[var(--color-primary-container)] md:text-3xl"
         >
           WatchLore
         </Link>
@@ -107,21 +128,14 @@ export function Navbar({
         )}
 
         {/* Right side */}
-        <div className="flex items-center gap-3">
-          {/* Search */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Search (hidden on the smallest screens to reduce clutter next to the hamburger) */}
           {showSearch && (
-            <button className="flex h-8 w-8 items-center justify-center text-[var(--color-on-surface-variant)] transition-colors duration-[var(--transition-duration-fast)] hover:text-[var(--color-on-surface)]">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
+            <button
+              aria-label="Search"
+              className="xs:flex hidden h-8 w-8 items-center justify-center text-[var(--color-on-surface-variant)] transition-colors duration-[var(--transition-duration-fast)] hover:text-[var(--color-on-surface)]"
+            >
+              <Search size={16} />
             </button>
           )}
 
@@ -130,97 +144,139 @@ export function Navbar({
             onClick={onVault}
             size="sm"
             variant="secondary"
-            className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius)] bg-[var(--color-surface-container)] px-3 py-1.5 text-sm font-semibold text-[var(--color-on-surface)] transition-colors duration-[var(--transition-duration-fast)] hover:bg-[var(--color-surface-container-high)]"
+            className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius)] bg-[var(--color-surface-container)] px-2.5 py-1.5 text-sm font-semibold text-[var(--color-on-surface)] transition-colors duration-[var(--transition-duration-fast)] hover:bg-[var(--color-surface-container-high)] md:px-3"
           >
             <Lock size={16} />
-            My Vault
+            <span className="hidden sm:inline">My Vault</span>
           </Button>
 
-          {/* Logout Button */}
+          {/* Logout Button (Desktop only — mobile uses the drawer's logout button) */}
           {user && (
             <Button
               variant="primary"
               size="sm"
-              className="flex-1 rounded-2xl"
+              className="hidden items-center gap-1.5 rounded-2xl md:flex"
               onClick={handleLogout}
             >
               <LogOut size={16} />
             </Button>
           )}
 
-          {/* Theme toggle */}
+          {/* Theme toggle (Desktop only — mobile uses the drawer's theme button) */}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-on-surface-variant)] transition-colors duration-[var(--transition-duration-fast)] hover:bg-[var(--color-surface-container)] hover:text-[var(--color-on-surface)]"
+            className="hidden h-8 w-8 items-center justify-center rounded-full text-[var(--color-on-surface-variant)] transition-colors duration-[var(--transition-duration-fast)] hover:bg-[var(--color-surface-container)] hover:text-[var(--color-on-surface)] md:flex"
           >
-            {theme === 'dark' ? (
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="5" />
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-              </svg>
-            ) : (
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
-          {/* Mobile menu button */}
+          {/* Mobile menu toggle button */}
           {showNavLinks && (
             <button
               onClick={() => setMobileOpen((o) => !o)}
-              className="flex h-8 w-8 items-center justify-center text-[var(--color-on-surface-variant)] md:hidden"
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-drawer"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center text-[var(--color-on-surface-variant)] md:hidden"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                {mobileOpen ? (
-                  <path d="M18 6L6 18M6 6l12 12" />
-                ) : (
-                  <path d="M3 12h18M3 6h18M3 18h18" />
-                )}
-              </svg>
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           )}
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {showNavLinks && mobileOpen && (
-        <div className="border-t border-[var(--color-divider)] bg-[var(--color-background)]/95 backdrop-blur-md md:hidden">
-          <nav className="flex flex-col gap-1 px-5 py-4">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="py-2.5 text-sm font-semibold text-[var(--color-on-surface-variant)] transition-colors duration-[var(--transition-duration-fast)] hover:text-[var(--color-primary)]"
+      {/* Mobile Drawer (Sidebar Overlay) */}
+      {showNavLinks && (
+        <>
+          {/* Backdrop blur overlay */}
+          <div
+            className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+              mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Slide-out Sidebar Drawer */}
+          <div
+            id="mobile-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            className={`fixed top-0 right-0 bottom-0 z-50 flex w-72 max-w-[80vw] flex-col border-l border-[var(--color-divider)] bg-[var(--color-background)] p-6 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+              mobileOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            {/* Drawer Header */}
+            <div className="mb-8 flex items-center justify-between">
+              <span className="font-display text-xl font-bold text-[var(--color-primary)]">
+                WatchLore
+              </span>
+              <button
                 onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                className="cursor-pointer text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]"
               >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Mobile Nav Links */}
+            <nav className="mb-6 flex flex-col gap-1">
+              {NAV_LINKS.map((link) => {
+                const isActive = currentPath === link.href;
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                        : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)] hover:text-[var(--color-on-surface)]'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <hr className="border-[var(--color-divider)]" />
+
+            {/* Spacer pushes the icon row to the bottom of the drawer */}
+            <div className="flex-1" />
+
+            {/* Drawer Footer: theme icon + logout icon, side by side */}
+            <div className="flex items-center gap-3">
+              {/* Theme Selector Option */}
+              <button
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--color-surface-container)] px-4 py-3 text-sm font-semibold text-[var(--color-on-surface)] transition-all hover:bg-[var(--color-surface-container-high)]"
+              >
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+              </button>
+
+              {/* Logout Button */}
+              {user && (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileOpen(false);
+                  }}
+                  aria-label="Sign out"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-on-primary)] transition-all hover:opacity-90"
+                >
+                  <LogOut size={16} />
+                  <span>LogOut</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </header>
   );

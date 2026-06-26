@@ -13,6 +13,8 @@ import MoviesPage from '../../features/movies/ui/MoviesPage';
 import SeriesPage from '../../features/series/ui/SeriesPage';
 import AnimePage from '../../features/anime/ui/AnimePage';
 import { VaultPage } from '../../features/vault/ui/vaultPage';
+import AddToVault from '../../features/addToVault/ui/AddToVault';
+import ShowDetail from '../../features/vault/ui/ShowDetail';
 
 const AppRoutes = () => {
   const dispatch = useAppDispatch();
@@ -71,6 +73,14 @@ const AppRoutes = () => {
         {
           path: 'vault',
           element: <VaultPage />,
+        },
+        {
+          path: 'vault/:id',
+          element: <ShowDetail />,
+        },
+        {
+          path: 'add-to-vault',
+          element: <AddToVault />,
         },
       ],
     },
