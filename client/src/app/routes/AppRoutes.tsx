@@ -12,6 +12,7 @@ import DiscoverPage from '../../features/discover/ui/DiscoverPage';
 import MoviesPage from '../../features/movies/ui/MoviesPage';
 import SeriesPage from '../../features/series/ui/SeriesPage';
 import AnimePage from '../../features/anime/ui/AnimePage';
+import { VaultPage } from '../../features/vault/ui/vaultPage';
 
 const AppRoutes = () => {
   const dispatch = useAppDispatch();
@@ -66,6 +67,10 @@ const AppRoutes = () => {
         {
           path: 'anime',
           element: <AnimePage />,
+        },
+        {
+          path: 'vault',
+          element: <VaultPage />,
         },
       ],
     },
