@@ -3,14 +3,16 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type ServerConfig struct {
-	Port string
-	Env  string
+	Port           string
+	Env            string
+	AllowedOrigins []string
 }
 
 type DatabaseConfig struct {
@@ -47,6 +49,15 @@ func Load() *Config {
 		log.Fatal(".env file not found")
 	}
 
+	originsRaw := os.Getenv("ALLOWED_ORIGINS")
+	var allowedOrigins []string
+	if originsRaw != "" {
+		allowedOrigins = strings.Split(originsRaw, ",")
+	} else {
+		// Fallback default for local development
+		allowedOrigins = []string{"http://localhost:5173"}
+	}
+
 	monogdb_uri := os.Getenv("MONGODB_URI")
 	if monogdb_uri == "" {
 		log.Fatal("MongoDB_URI is not defined in .env file")
@@ -79,8 +90,9 @@ func Load() *Config {
 
 	return &Config{
 		ServerConfig{
-			Port: getEnv("PORT", "8080"),
-			Env:  getEnv("ENV", "development"),
+			Port:           getEnv("PORT", "8080"),
+			Env:            getEnv("ENV", "development"),
+			AllowedOrigins: allowedOrigins,
 		},
 
 		DatabaseConfig{
