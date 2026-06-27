@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import updateVaultShowApi from '../../../shared/api/updateVaultShowApi';
 import { axiosInstance } from '../../../config/axiosInstance';
+import toast from 'react-hot-toast';
 
 export interface NewEntryFormData {
   title: string;
@@ -51,8 +52,6 @@ export const useAddToVault = () => {
 
   const onSubmit = async (data: NewEntryFormData) => {
     try {
-      console.log('Submitting entry form data:', data);
-
       if (editShow?.id) {
         // ── EDIT MODE (Updating existing show) ──
 
@@ -77,7 +76,7 @@ export const useAddToVault = () => {
 
         // Invalidate single show query cache
         queryClient.invalidateQueries({ queryKey: ['vaultShow', editShow.id] });
-        alert(`Success! Entry "${data.title}" updated.`);
+        toast.success(`${data.title} - updated `);
       } else {
         // ── CREATE MODE (Adding new show) ──
         await addShowToVaultAPI({
@@ -90,7 +89,7 @@ export const useAddToVault = () => {
           imageFile: data.coverImage || undefined,
         });
 
-        alert(`Success! Entry "${data.title}" has been archived.`);
+        toast.success(`${data.title} has been archived`);
       }
 
       // Invalidate shows list query cache to trigger real-time refresh
@@ -98,8 +97,8 @@ export const useAddToVault = () => {
       reset();
       navigate('/vault');
     } catch (error) {
+      toast.error('Invalid input data or something went wrong');
       console.error('Failed to submit entry:', error);
-      alert('An error occurred during submission.');
     }
   };
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import fetchShowByIdApi from '../../../shared/api/fetchShowByIdApi';
 import updateVaultShowApi, { type UpdateShowPayload } from '../../../shared/api/updateVaultShowApi';
 import deleteVaultShowApi from '../../../shared/api/deleteVaultShowApi';
+import toast from 'react-hot-toast';
 export const useShowDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export const useShowDetail = () => {
     mutationFn: () => deleteVaultShowApi(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vaultShows'] });
+      toast.success('Deleted successfully');
       navigate('/vault');
     },
     onError: (err) => {
@@ -48,9 +50,7 @@ export const useShowDetail = () => {
     updateMutation.mutate({ rating, review });
   };
   const handleDeleteShow = () => {
-    if (confirm('Are you sure you want to remove this show from your vault?')) {
-      deleteMutation.mutate();
-    }
+    deleteMutation.mutate();
   };
   return {
     show,

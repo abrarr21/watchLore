@@ -7,9 +7,13 @@ export const loginUser = createAsyncThunk(
   async (credential: LoginFormData, thunkApi) => {
     try {
       const res = await axiosInstance.post('/auth/users/login', credential);
-      return res.data.data;
-    } catch (error) {
-      return thunkApi.rejectWithValue(error);
+      return {
+        user: res.data.data,
+        message: res.data.message,
+      };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Authentication failed';
+      return thunkApi.rejectWithValue(errorMsg);
     }
   }
 );
@@ -30,9 +34,13 @@ export const registerUser = createAsyncThunk(
     try {
       const res = await axiosInstance.post('/auth/users/register', credential);
       // console.log(res);
-      return res.data;
-    } catch (error) {
-      return thunkApi.rejectWithValue(error);
+      return {
+        user: res.data.data,
+        message: res.data.message,
+      };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Registration failed';
+      return thunkApi.rejectWithValue(errorMsg);
     }
   }
 );

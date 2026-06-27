@@ -9,6 +9,7 @@ import addShowToVaultAPI from '../../../shared/api/AddShowToVaultApi';
 import { useVaultShow } from '../../../shared/hooks/useVaultShow';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
+import toast from 'react-hot-toast';
 
 interface MoviesDATA {
   id: string;
@@ -42,9 +43,10 @@ const MoviesPage = () => {
     mutationFn: addShowToVaultAPI,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['vaultShows'] });
-      alert(`${variables.title} - added to vault`);
+      toast.success(`${variables.title} - added to vault`);
     },
     onError: (error) => {
+      toast.error('failed to add to vault');
       console.log('Failed to add movie to vault: ', error);
     },
   });

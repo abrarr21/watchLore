@@ -9,6 +9,7 @@ import { Navbar } from '../../../shared/ui/Navbar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useSeries } from '../hooks/useSeries';
 import { useNavigate } from 'react-router';
+import toast from 'react-hot-toast';
 
 interface SeriesDATA {
   id: string;
@@ -42,8 +43,10 @@ const MoviesPage = () => {
       // Invalidate cache to trigger immediate refresh
       queryClient.invalidateQueries({ queryKey: ['vaultShows'] });
       alert(`${variables.title} - onSuccessfully added to vault`);
+      toast.success(`${variables.title} - added to vault`);
     },
     onError: (error) => {
+      toast.error('failed to add to vault');
       console.log('Failed to add anime to vault: ', error);
     },
   });

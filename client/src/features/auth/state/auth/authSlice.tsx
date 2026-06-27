@@ -14,7 +14,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  isLoading: false,
+  isLoading: true,
 };
 
 const authSlice = createSlice({
@@ -37,7 +37,7 @@ const authSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.isLoading = false;
       })
       .addCase(loginUser.rejected, (state) => {
@@ -61,7 +61,7 @@ const authSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.isLoading = false;
       })
       .addCase(registerUser.rejected, (state) => {

@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { Lock, LogOut, Sun, Moon, Search, Menu, X } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import { removeUser } from '../../features/auth/state/auth/authSlice';
+import toast from 'react-hot-toast';
 
 type NavLink = { label: string; href: string; active?: boolean };
 
@@ -39,6 +40,7 @@ export function Navbar({
       // remove user from redux
       dispatch(removeUser());
 
+      toast.success('Logout successfully');
       navigate('/');
     } catch (error) {
       console.log(`Error logout: `, error);

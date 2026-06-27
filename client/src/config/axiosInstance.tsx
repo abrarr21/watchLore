@@ -3,7 +3,7 @@ import { removeUser } from '../features/auth/state/auth/authSlice';
 import { store } from '../app/store';
 
 export const axiosInstance = axios.create({
-  baseURL: 'http://localhost:6969/',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:6969/',
   withCredentials: true,
 });
 

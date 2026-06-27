@@ -9,6 +9,7 @@ import { Plus } from 'lucide-react';
 import { Navbar } from '../../../shared/ui/Navbar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
+import toast from 'react-hot-toast';
 
 interface AnimeDATA {
   id: string;
@@ -41,9 +42,10 @@ const MoviesPage = () => {
     onSuccess: (_, variables) => {
       // Invalidate cache to trigger immediate refresh
       queryClient.invalidateQueries({ queryKey: ['vaultShows'] });
-      alert(`${variables.title} - onSuccessfully added to vault`);
+      toast.success(`${variables.title} - added to vault`);
     },
     onError: (error) => {
+      toast.error('failed to add to vault');
       console.log('Failed to add anime to vault: ', error);
     },
   });
