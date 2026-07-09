@@ -82,7 +82,7 @@ const MoviesPage = () => {
         <div className="mx-auto max-w-[var(--layout-container-max)] px-[var(--layout-margin-desktop)] max-md:px-5">
           <div className="mb-16 space-y-4 text-center">
             <h2 className="font-display text-3xl font-bold tracking-tight text-[var(--color-on-surface)] md:text-4xl">
-              Discover movies worth adding to your vault
+              Discover Movies worth adding to your vault
             </h2>
 
             {/* Filter  */}
