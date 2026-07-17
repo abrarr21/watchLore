@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/abrarr21/watchLore/internal/handlers"
@@ -56,6 +57,12 @@ func serveSPA(r chi.Router, staticDir string) {
 
 	r.Get("/*", func(w http.ResponseWriter, req *http.Request) {
 		path := filepath.Clean(req.URL.Path)
+
+		// Return HTTP 404 for missing API/Auth routes instead of index.html
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/auth/") {
+			http.Error(w, "API endpoint not found", http.StatusNotFound)
+			return
+		}
 
 		// Open the file to verify if it exists
 		f, err := fs.Open(path)

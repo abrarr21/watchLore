@@ -2,10 +2,15 @@ package utils
 
 import (
 	"net/http"
+	"os"
 	"time"
 )
 
 func SetCookie(w http.ResponseWriter, name, value string, maxAge int) {
+	sameSiteMode := http.SameSiteNoneMode
+	if os.Getenv("ENV") == "production" {
+		sameSiteMode = http.SameSiteLaxMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    value,
@@ -14,11 +19,15 @@ func SetCookie(w http.ResponseWriter, name, value string, maxAge int) {
 		MaxAge:   maxAge,
 		Expires:  time.Now().Add(time.Duration(maxAge) * time.Second),
 		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: sameSiteMode,
 	})
 }
 
 func ClearCookie(w http.ResponseWriter, name string) {
+	sameSiteMode := http.SameSiteNoneMode
+	if os.Getenv("ENV") == "production" {
+		sameSiteMode = http.SameSiteLaxMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    "",
@@ -27,6 +36,6 @@ func ClearCookie(w http.ResponseWriter, name string) {
 		MaxAge:   -1,
 		Expires:  time.Unix(0, 0),
 		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: sameSiteMode,
 	})
 }

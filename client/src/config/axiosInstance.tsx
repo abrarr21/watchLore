@@ -2,8 +2,19 @@ import axios from 'axios';
 import { removeUser } from '../features/auth/state/auth/authSlice';
 import { store } from '../app/store';
 
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // Fallback to relative root in production
+  if (import.meta.env.PROD) {
+    return '/';
+  }
+  return 'http://localhost:6969/';
+};
+
 export const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:6969/',
+  baseURL: getBaseURL(),
   withCredentials: true,
 });
 
