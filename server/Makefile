@@ -1,6 +1,6 @@
 BINARY_NAME=watchlore
 MAIN_PACKAGE=./cmd/api
-BUILD_DIR= ./bin
+BUILD_DIR=./bin
 
 .PHONY: tidy
 tidy:
