@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/abrarr21/watchLore/internal/handlers"
@@ -30,7 +32,7 @@ func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 		MaxAge:           300, // Maximum value for preflight request cache (in seconds)
 	}))
 
-	r.Get("/", h.CheckHealth)
+	r.Get("/api/health", h.CheckHealth)
 
 	// Route group that have a limit of req body of 200 KB
 	r.Group(func(r chi.Router) {
@@ -42,5 +44,29 @@ func RegisterAllRoutes(h *handlers.Handler) *chi.Mux {
 
 	ShowsRoutes(r, h)
 
+	staticDir := "../client/dist"
+	serveSPA(r, staticDir)
+
 	return r
+}
+
+func serveSPA(r chi.Router, staticDir string) {
+	fs := http.Dir(staticDir)
+	fileServer := http.FileServer(fs)
+
+	r.Get("/*", func(w http.ResponseWriter, req *http.Request) {
+		path := filepath.Clean(req.URL.Path)
+
+		// Open the file to verify if it exists
+		f, err := fs.Open(path)
+		if err != nil {
+			// File does not exist, serve index.html (SPA Fallback)
+			http.ServeFile(w, req, filepath.Join(staticDir, "index.html"))
+			return
+		}
+		f.Close()
+
+		// File exists, serve it
+		fileServer.ServeHTTP(w, req)
+	})
 }
