@@ -45,9 +45,7 @@ type TMDBConfig struct {
 }
 
 func Load() *Config {
-	if err := godotenv.Load(".env"); err != nil {
-		log.Fatal(".env file not found")
-	}
+	_ = godotenv.Load(".env")
 
 	originsRaw := os.Getenv("ALLOWED_ORIGINS")
 	var allowedOrigins []string
