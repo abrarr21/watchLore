@@ -7,7 +7,6 @@ const Register = () => {
   const {
     registerRegister,
     handleRegisterSubmit,
-    watchRegister,
     errorsRegister,
     isSubmittingRegister,
     onRegisterSubmit,
@@ -16,7 +15,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const password = watchRegister('password');
+  // const password = watchRegister('password');
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-background)] px-4 py-8">

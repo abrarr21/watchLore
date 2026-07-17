@@ -28,7 +28,7 @@ interface MoviesDATA {
   };
 }
 
-const TOP_GENRES = ['Drama', 'Action', 'Comedy', 'Thriller', 'Adventure'];
+// const TOP_GENRES = ['Drama', 'Action', 'Comedy', 'Thriller', 'Adventure'];
 
 const MoviesPage = () => {
   const navigate = useNavigate();
